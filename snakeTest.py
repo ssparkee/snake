@@ -96,6 +96,12 @@ moveKeys = {
     'right': [pygame.K_RIGHT, pygame.K_d]
 }
 
+def isKeyInMoveKeys(key):
+    for keys in moveKeys.values():
+        if key in keys:
+            return True
+    return False
+
 def processSnakeChange(snake, x_change, y_change):
     moveQueue = []
     for event in pygame.event.get():
@@ -103,7 +109,7 @@ def processSnakeChange(snake, x_change, y_change):
             if event.key == K_ESCAPE:
                 quitProgram()
             else:
-                if len(moveQueue) < 6:
+                if isKeyInMoveKeys(event.key) and len(moveQueue) < 6:
                     moveQueue.append(event.key)
         elif event.type == QUIT:
             quitProgram()

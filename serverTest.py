@@ -54,8 +54,10 @@ gameExample = {
     'objects': [pygame.Rect(0,0,40,40)]
 }
 
+SERVER_IP = '127.0.0.1'
+
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-serverSocket.bind(('0.0.0.0', 65432))
+serverSocket.bind((SERVER_IP, 65432))
 serverSocket.settimeout(0.1)
 
 ct.printStatus("UDP Server is listening...")

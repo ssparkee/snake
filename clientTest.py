@@ -52,25 +52,27 @@ def commandThread():
         try:
             data = input('enter function: ')
             if data == 'disconnect':
-                clientSocket.sendto(json.dumps({'type': 'disconnect', 'data': {'id': clientID}}).encode(), ('localhost', 65432))
+                clientSocket.sendto(json.dumps({'type': 'disconnect', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
                 break
             elif data == 'createGame':
-                clientSocket.sendto(json.dumps({'type': 'createGame', 'data': {'id': clientID}}).encode(), ('localhost', 65432))
+                clientSocket.sendto(json.dumps({'type': 'createGame', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
             elif data == 'joinGame':
                 userGameID = input('enter game id: ')
-                clientSocket.sendto(json.dumps({'type': 'joinGame', 'data': {'id': clientID, 'gameID': userGameID}}).encode(), ('localhost', 65432))
+                clientSocket.sendto(json.dumps({'type': 'joinGame', 'data': {'id': clientID, 'gameID': userGameID}}).encode(), (SERVER_IP, 65432))
             elif data == 'startGame':
                 if gameHost and gameID is not None:
-                    clientSocket.sendto(json.dumps({'type': 'startGameReq', 'data': {'id': clientID, 'gameID': gameID}}).encode(), ('localhost', 65432))
+                    clientSocket.sendto(json.dumps({'type': 'startGameReq', 'data': {'id': clientID, 'gameID': gameID}}).encode(), (SERVER_IP, 65432))
             sleep(0.1)
         except KeyboardInterrupt:
             break
 
+
+SERVER_IP = 'localhost'
+
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#clientSocket.sendto(b'Hello from client', ('localhost', 65432))
 name = input('enter name: ')
 
-clientSocket.sendto(json.dumps({'type': 'connect', 'data':{'name':name}}).encode(), ('localhost', 65432))
+clientSocket.sendto(json.dumps({'type': 'connect', 'data': {'name': name}}).encode(), (SERVER_IP, 65432))
 clientSocket.settimeout(0.1)
 
 clientID = None

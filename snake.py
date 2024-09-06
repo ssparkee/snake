@@ -14,9 +14,6 @@ from pygame.locals import (
     KEYDOWN,
     QUIT
 )
-def quitProgram():
-    pygame.quit()
-    quit()
 
 moveKeys = {
     'up': [pygame.K_UP, pygame.K_w],
@@ -60,6 +57,7 @@ class snakeGame:
         self.y_change = 0
         self.velocity = 1
         self.environment = []
+        self.running = True
 
     def startGame(self):
         pygame.init()
@@ -67,6 +65,11 @@ class snakeGame:
         self.clock = pygame.time.Clock()
         self.running = True
         self.gameOver = False
+
+    def quitProgram(self):
+        self.running = False
+        pygame.quit()
+        quit()
 
     def drawGrid(self):
         gridSize = (self.GRIDWIDTH, self.GRIDHEIGHT)
@@ -79,13 +82,26 @@ class snakeGame:
         self.environment = environment
 
     def drawEnvironment(self):
+        def dictToRect(element):
+            rect = element['rect']
+            return pygame.Rect(rect[0], rect[1], rect[2], rect[3])
+
         for element in self.environment:
             if element['type'] == 'food':
                 self.drawApple(element['pos'])
             elif element['type'] == 'rect':
-                pygame.draw.rect(self.screen, element['colour'], element['rect'])
+                pygame.draw.rect(self.screen, element['colour'], dictToRect(element))
             elif element['type'] == 'circle':
                 pygame.draw.circle(self.screen, element['colour'], element['pos'], element['radius'])
+
+    def getSnakeAsEnvironment(self):
+        snake = []
+        for i in self.snake['body']:
+            snake.append({'type': 'rect', 'colour': (50, 125, 0), 'rect': [i[0]*self.BLOCKSIZE, i[1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE]})
+        snake.append({'type': 'rect', 'colour': (180, 20, 0), 'rect': [self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE]})
+        snake.append({'type': 'circle', 'colour': (255, 255, 255), 'pos': self.getEyes(self.BLOCKSIZE//8, self.snake['direction'], pygame.Rect(self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE))[0], 'radius': self.BLOCKSIZE//8})
+        snake.append({'type': 'circle', 'colour': (255, 255, 255), 'pos': self.getEyes(self.BLOCKSIZE//8, self.snake['direction'], pygame.Rect(self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE))[1], 'radius': self.BLOCKSIZE//8})
+        return snake
 
     def drawSnake(self):
         for i in self.snake['body']:
@@ -134,12 +150,12 @@ class snakeGame:
         for event in pygame.event.get():
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
-                    quitProgram()
+                    self.quitProgram()
                 else:
                     if isKeyInMoveKeys(event.key) and len(moveQueue) < 6:
                         moveQueue.append(event.key)
             elif event.type == QUIT:
-                quitProgram()
+                self.quitProgram()
 
         if len(moveQueue) > 0:
             movementOccured = True

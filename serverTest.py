@@ -19,6 +19,7 @@ class Client:
         self.name = name
         self.addr = addr
         self.gameID = gameID
+        self.environment = []
 
     def connectToGame(self, gameID):
         self.gameID = gameID
@@ -54,7 +55,8 @@ gameExample = {
     'objects': [pygame.Rect(0,0,40,40)]
 }
 
-SERVER_IP = '127.0.0.1'
+SERVER_IP = '192.168.1.134'
+MINPLAYERS = 1
 
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 serverSocket.bind((SERVER_IP, 65432))
@@ -68,6 +70,24 @@ def sendToClient(clientID, data):
 
 def getPlayerSnake(gameID, clientID):
     return clients[clientID].snake
+
+def setPlayerSnake(gameID, clientID, snake):
+    clients[clientID].snake = snake
+
+def setPlayerEnvironment(gameID, clientID, environment):
+    clients[clientID].environment = environment
+
+def getPlayerEnvironment(clientID):
+    return clients[clientID].environment
+
+def getEnvironmentExclusive(gameID, clientID):
+    environment = []
+    for client in getClientsInGame(gameID):
+        if client.id != clientID:
+            print('not same')
+            for i in getPlayerEnvironment(client.id):
+                environment.append(i)
+    return environment
 
 def isOccupied(gameID, x, y):
     for client in getClientsInGame(gameID):
@@ -97,18 +117,28 @@ def gameThread(gameID):
             'type': 'startGame',
             'data': {'id': gameID, 'start':'for real this time'}
         })
-    return
     while True:
-        pass
+        for client in gameClients:
+            environment = getEnvironmentExclusive(gameID, client.id)
+            sendToClient(client.id, {
+                'type': 'updateEnvironment',
+                'data': {'environment': environment}
+            })
 
 while True:
     try:
         data, addr = serverSocket.recvfrom(1024)
     except socket.timeout:
         continue
+    except ConnectionResetError:
+        continue
+    except KeyboardInterrupt:
+        print("Closing server...")
+        serverSocket.close()
+        quit()
     try:
         data = json.loads(data)
-        print(f"Received: {data} from {addr}")
+        #print(f"Received: {data} from {addr}")
 
 
         if data['type'] == 'connect':
@@ -147,7 +177,7 @@ while True:
             gameID = data['data']['gameID']
             clientID = data['data']['id']
 
-            if len(games[gameID]['players']) < 2:
+            if len(games[gameID]['players']) < MINPLAYERS:
                 sendToClient(clientID, {'type': 'startGameRes', 'data': {'fail': True, 'message': 'Not enough players'}})
                 continue
             else:
@@ -171,7 +201,13 @@ while True:
                 ct.printStatus(f"Game initialised: {gameID} with players {games[gameID]['players']}")
 
                 threading.Thread(target=gameThread, args=(gameID,)).start()
-
+        
+        elif data['type'] == 'clientUpdate':
+            clientID = data['data']['id']
+            gameID = clients[clientID].gameID
+            
+            setPlayerSnake(gameID, clientID, data['data']['snake'])
+            setPlayerEnvironment(gameID, clientID, data['data']['environment'])
 
     except Exception as e:
         print("Invalid data received", e)

@@ -93,15 +93,50 @@ def commandThread():
         except KeyboardInterrupt:
             break
 
+def getIPList():
+    listfile = open('iplist', 'r')
+    ipList = []
+    for line in listfile:
+        ipList.append(line.strip())
+    listfile.close()
+    return ipList
 
-SERVER_IP = '192.168.1.134'
+def addToIPList(ip):
+    listfile = open('iplist', 'a')
+    listfile.write(ip + '\n')
+    listfile.close()
+
+def attemptConnection(ipList):
+    data, addr = None, None
+    clientSocket.settimeout(0.3)
+    for ip in ipList:
+        try:
+            clientSocket.sendto(json.dumps({'type': 'ping', 'data': {}}).encode(), (ip, 65432))
+            data, addr = clientSocket.recvfrom(4096)
+        except Exception as e:
+            if type(e) == socket.timeout:
+                print('bad ip')
+            elif type(e) == KeyboardInterrupt:
+                break
+            elif type(e) == TimeoutError:
+                break
+            else:
+                print("Error:", e)
+                continue
+        if data is not None:
+            return ip
+    return None
 
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+SERVER_IP = attemptConnection(getIPList())
+
+if SERVER_IP is None:
+    SERVER_IP = input('server could not be found. Enter ip: ')
+    addToIPList(SERVER_IP)
+
 name = input('enter name: ')
-
-clientSocket.sendto(json.dumps({'type': 'connect', 'data': {'name': name}}).encode(), (SERVER_IP, 65432))
 clientSocket.settimeout(0.1)
-
 clientID = None
 gameID = None
 gameHost = False
@@ -110,6 +145,9 @@ gameStart = False
 gameEnvironment = []
 snakeInfo = []
 collision = (False, None, None)
+
+clientSocket.sendto(json.dumps({'type': 'connect', 'data': {'name': name}}).encode(), (SERVER_IP, 65432))
+
 while clientID is None:
     try:
         data, addr = clientSocket.recvfrom(4096)

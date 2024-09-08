@@ -25,6 +25,19 @@ class Client:
     def connectToGame(self, gameID):
         self.gameID = gameID
 
+
+def getLocalIP():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        localIP = s.getsockname()[0]
+    except Exception as e:
+        localIP = "Unable to get local IP"
+    finally:
+        s.close()
+
+    return localIP
+
 def getClientsInGame(gameID):
     return [client for client in clients.values() if client.gameID == gameID]
 
@@ -58,14 +71,14 @@ gameExample = {
     'objects': [pygame.Rect(0,0,40,40)]
 }
 
-SERVER_IP = '192.168.1.134'
+SERVER_IP = getLocalIP()
 MINPLAYERS = 1
 
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 serverSocket.bind((SERVER_IP, 65432))
 serverSocket.settimeout(0.1)
 
-ct.printStatus("UDP Server is listening...")
+ct.printStatus(f"UDP Server is listening, IP: {SERVER_IP}")
 
 def sendToClient(clientID, data):
     serverSocket.sendto(json.dumps(data).encode(), clients[clientID].addr)
@@ -176,8 +189,6 @@ while True:
 
     try:
         data = json.loads(data)
-        #print(f"Received: {data} from {addr}")
-
 
         if data['type'] == 'connect':
             clientID = str(uuid4())
@@ -194,6 +205,10 @@ while True:
                 if clientID in games[gameID]['players']:
                     games[gameID]['players'].remove(clientID)
             del clients[clientID]
+
+        elif data['type'] == 'ping':
+            serverSocket.sendto(json.dumps({'type': 'ping', 'data': {}}).encode(), addr)
+            ct.printStatus(f"Ping from IP {addr[0]}")
 
         elif data['type'] == 'createGame':
             gameID = newGame()

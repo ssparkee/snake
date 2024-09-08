@@ -11,16 +11,16 @@ while True:
     snakeGame.processSnakeChange()
     snakeGame.updateEnvironment([food, {'type': 'rect', 'colour': (255, 0, 0), 'rect': pygame.Rect(0, 0, 40, 40)}])
 
-    snake = snakeGame.snake
-    if snake['head'] == food['pos']:
+    snakeObj = snakeGame.snake
+    if snakeObj['head'] == food['pos']:
         food['pos'] = snake.getRandApplePos(snakeGame.snake)
         snakeGame.increaseSnakeLength()
 
-    if snake['head'] in snake['body'] and snake['length'] > 3:
+    if snakeObj['head'] in snakeObj['body'] and snakeObj['length'] > 3:
         print("Game Over")
         break
 
-    if snake['head'][0] > snakeGame.GRIDWIDTH-1 or snake['head'][0] < 0 or snake['head'][1] > snakeGame.GRIDHEIGHT-1 or snake['head'][1] < 0:
+    if snakeObj['head'][0] > snakeGame.GRIDWIDTH-1 or snakeObj['head'][0] < 0 or snakeObj['head'][1] > snakeGame.GRIDHEIGHT-1 or snakeObj['head'][1] < 0:
         print("Game Over")
         break
 

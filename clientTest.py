@@ -6,10 +6,23 @@ import colouredText as ct
 import snake
 
 def socketListener():
-    global gameID, gameHost, snakeInfo, gameStart, gameEnvironment
+    global gameID, gameHost, snakeInfo, gameStart, gameEnvironment, collision
     while True:
         try:
-            data, addr = clientSocket.recvfrom(1024)
+            data, addr = clientSocket.recvfrom(4096)
+        except Exception as e:
+            if type(e) == socket.timeout:
+                continue
+            elif type(e) == KeyboardInterrupt:
+                return
+            elif type(e) == WindowsError:
+                ct.printError("Connection closed")
+                return
+            else:
+                ct.printError(f"Error: {e}")
+                continue
+
+        try:
             #print(f"Received: {data}")
             data = json.loads(data)
             if data['type'] == 'disconnect':
@@ -33,16 +46,21 @@ def socketListener():
                 ct.printStatus(f"Game started: {data['data']['id']}")
                 gameStart = True
             elif data['type'] == 'updateEnvironment':
-                print(data['data']['environment'])
                 gameEnvironment = data['data']['environment']
-
-        except socket.timeout:
-            continue
-        except KeyboardInterrupt:
-            break
-        except WindowsError:
-            ct.printError("Connection closed")
-            break
+                collision = data['data']['collision']
+                if collision[0] and snakeGame is not None:
+                    if collision[1] == 'wall':
+                        snakeGame.quitProgram()
+                        collision = (False, None, None)
+                    elif collision[1] == 'food':
+                        snakeGame.increaseSnakeLength()
+                        collision = (False, None, None)
+                    elif collision[1] == 'body':
+                        snakeGame.quitProgram()
+                        collision = (False, None, None)
+                    elif collision[1] == 'self':
+                        snakeGame.quitProgram()
+                        collision = (False, None, None)
         except Exception as e:
             ct.printError(f"Error: {e}")
             break
@@ -84,18 +102,23 @@ snakeGame = None
 gameStart = False
 gameEnvironment = []
 snakeInfo = []
+collision = (False, None, None)
 while clientID is None:
     try:
-        data, addr = clientSocket.recvfrom(1024)
+        data, addr = clientSocket.recvfrom(4096)
         print(f"Received: {data}")
         data = json.loads(data)
         
         if data['type'] == 'connect':
             clientID = data['data']['id']
-    except socket.timeout:
-        continue
-    except KeyboardInterrupt:
-        break
+    except Exception as e:
+        if type(e) == socket.timeout:
+            continue
+        elif type(e) == KeyboardInterrupt:
+            break
+        else:
+            print("Error:", e)
+            continue
 
 
 socketThread = threading.Thread(target=socketListener)
@@ -115,24 +138,28 @@ testThread.join(timeout=0.1)
 snakeGame = snake.snakeGame((800, 600), 40, snakeInfo)
 snakeGame.startGame()
 
-while True:
-    snakeGame.processSnakeChange()
-    clientSnake = snakeGame.snake
-    clientEnvironment = snakeGame.getSnakeAsEnvironment()
+while snakeGame.running:
+    try:
+        snakeGame.processSnakeChange()
+        clientSnake = snakeGame.snake
+        clientEnvironment = snakeGame.getSnakeAsEnvironment()
 
-    clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {'id': clientID, 'snake':clientSnake, 'environment':clientEnvironment}}).encode(), (SERVER_IP, 65432))
-    
-    snakeGame.updateEnvironment(gameEnvironment)
-    snakeGame.drawEnvironment()
-    gameEnvironment = []
+        clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {'id': clientID, 'snake':clientSnake, 'environment':clientEnvironment}}).encode(), (SERVER_IP, 65432))
+        
+        print(collision)
 
-    snakeGame.playFrame()
-    sleep(0.15)
+        snakeGame.updateEnvironment(gameEnvironment)
+        
+        snakeGame.drawEnvironment()
+        gameEnvironment = []
 
-    if snakeGame.running == False or snakeGame is None:
+        snakeGame.playFrame()
+        sleep(0.15)
+    except KeyboardInterrupt:
         break
 
 #need to work on clean exit
 socketThread.join(timeout=0.1)
+
 clientSocket.sendto(json.dumps({'type': 'disconnect', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
 clientSocket.close()

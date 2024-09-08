@@ -68,8 +68,6 @@ class snakeGame:
 
     def quitProgram(self):
         self.running = False
-        pygame.quit()
-        quit()
 
     def drawGrid(self):
         gridSize = (self.GRIDWIDTH, self.GRIDHEIGHT)

@@ -16,6 +16,7 @@ class Client:
             'direction': (0, 0),
             'last': (0, 0)
         }
+        self.length = 3
         self.name = name
         self.addr = addr
         self.gameID = gameID
@@ -41,11 +42,13 @@ def newGame():
 
 clients = {}
 games = {}
+gameThreads = []
 GRIDWIDTHPX = 800
 GRIDHEIGHTPX = 600
 BLOCKSIZE = 40
 GRIDWIDTH = GRIDWIDTHPX // BLOCKSIZE
 GRIDHEIGHT = GRIDHEIGHTPX // BLOCKSIZE
+FOODCOUNT = 3
 
 gameExample = {
     'id': '1234',
@@ -80,6 +83,13 @@ def setPlayerEnvironment(gameID, clientID, environment):
 def getPlayerEnvironment(clientID):
     return clients[clientID].environment
 
+def getFoodSpawn(gameID):
+    foodPos = (randint(0, GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
+    while isOccupied(gameID, foodPos[0], foodPos[1])[0]:
+        foodPos = (randint(0, GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
+    print('food:', foodPos)
+    return foodPos
+
 def getEnvironmentExclusive(gameID, clientID):
     environment = []
     for client in getClientsInGame(gameID):
@@ -87,14 +97,27 @@ def getEnvironmentExclusive(gameID, clientID):
             print('not same')
             for i in getPlayerEnvironment(client.id):
                 environment.append(i)
+    for food in games[gameID]['food']:
+        environment.append({'type': 'food', 'pos': food})
     return environment
 
-def isOccupied(gameID, x, y):
+def isOccupied(gameID, x, y, clientID=''):
     for client in getClientsInGame(gameID):
-        for part in client.snake['body']:
-            if part == (x, y):
-                return (True, 'body', client.id)
-    #add food check
+        if client.id != clientID:
+            for part in client.snake['body']:
+                if part == [x, y]:
+                    return (True, 'body', client.id)
+        else:
+            if int(client.snake['length']) > 3:
+                for part in client.snake['body']:
+                    if part == [x, y]:
+                        return (True, 'self', client.id)
+    if x < 0 or x >= GRIDWIDTH or y < 0 or y >= GRIDHEIGHT:
+        return (True, 'wall', None)
+    if (x, y) in games[gameID]['food']:
+        games[gameID]['food'].remove((x, y))
+        games[gameID]['food'].append(getFoodSpawn(gameID))
+        return (True, 'food', None)
     return (False, None, None)
 
 def createSnakeSpawn(gameID):
@@ -119,23 +142,33 @@ def gameThread(gameID):
         })
     while True:
         for client in gameClients:
-            environment = getEnvironmentExclusive(gameID, client.id)
-            sendToClient(client.id, {
-                'type': 'updateEnvironment',
-                'data': {'environment': environment}
-            })
+            try:
+                sendToClient(client.id, {
+                    'type': 'updateEnvironment',
+                    'data': {'environment': getEnvironmentExclusive(gameID, client.id), 'collision': isOccupied(gameID, client.snake['head'][0], client.snake['head'][1], clientID=client.id)}
+                })
+            except KeyError:
+                continue
 
 while True:
     try:
-        data, addr = serverSocket.recvfrom(1024)
-    except socket.timeout:
-        continue
-    except ConnectionResetError:
-        continue
-    except KeyboardInterrupt:
-        print("Closing server...")
-        serverSocket.close()
-        quit()
+        data, addr = serverSocket.recvfrom(4096)
+    except Exception as e:
+        if type(e) == socket.timeout:
+            continue
+        elif type(e) == KeyboardInterrupt:
+            print("Closing server...")
+            serverSocket.close()
+            for thread in gameThreads:
+                thread.close()
+            quit()
+            break
+        elif type(e) == ConnectionResetError:
+            continue
+        else:
+            print("Error:", e)
+            continue
+
     try:
         data = json.loads(data)
         #print(f"Received: {data} from {addr}")
@@ -182,7 +215,7 @@ while True:
                 continue
             else:
                 games[gameID]['state'] = 'running'
-
+                games[gameID]['food'] = [getFoodSpawn(gameID) for i in range(FOODCOUNT)]
                 #sendToClient(clientID, {'type': 'startGame', 'data': {'id': gameID}})
 
                 gameClients = getClientsInGame(gameID)
@@ -200,7 +233,8 @@ while True:
                 
                 ct.printStatus(f"Game initialised: {gameID} with players {games[gameID]['players']}")
 
-                threading.Thread(target=gameThread, args=(gameID,)).start()
+                gameThreads.append(threading.Thread(target=gameThread, args=(gameID,), daemon=True))
+                gameThreads[-1].start()
         
         elif data['type'] == 'clientUpdate':
             clientID = data['data']['id']
@@ -210,12 +244,12 @@ while True:
             setPlayerEnvironment(gameID, clientID, data['data']['environment'])
 
     except Exception as e:
-        print("Invalid data received", e)
-        continue
-
-    except KeyboardInterrupt:
-        print("Closing server...")
-        serverSocket.close()
-        break
+        if type(e) == json.decoder.JSONDecodeError:
+            print("Invalid JSON received")
+        elif type(e) == KeyError:
+            print("Invalid data received")
+        else:
+            print("Invalid data received", e)
+            continue
     
     

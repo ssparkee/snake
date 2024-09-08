@@ -49,6 +49,8 @@ def socketListener():
                 gameEnvironment = data['data']['environment']
                 collision = data['data']['collision']
                 if collision[0] and snakeGame is not None:
+                    pass
+                """
                     if collision[1] == 'wall':
                         snakeGame.quitProgram()
                         collision = (False, None, None)
@@ -60,7 +62,7 @@ def socketListener():
                         collision = (False, None, None)
                     elif collision[1] == 'self':
                         snakeGame.quitProgram()
-                        collision = (False, None, None)
+                        collision = (False, None, None)"""
         except Exception as e:
             ct.printError(f"Error: {e}")
             break
@@ -82,6 +84,11 @@ def commandThread():
                 if gameHost and gameID is not None:
                     clientSocket.sendto(json.dumps({'type': 'startGameReq', 'data': {'id': clientID, 'gameID': gameID}}).encode(), (SERVER_IP, 65432))
                     return
+            elif data == 'quick':
+                clientSocket.sendto(json.dumps({'type': 'createGame', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
+                sleep(0.5)
+                clientSocket.sendto(json.dumps({'type': 'startGameReq', 'data': {'id': clientID, 'gameID': gameID}}).encode(), (SERVER_IP, 65432))
+                return
             sleep(0.1)
         except KeyboardInterrupt:
             break

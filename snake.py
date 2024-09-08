@@ -143,6 +143,20 @@ class snakeGame:
         self.snake['body'].insert(0, self.snake['last'])
         self.snake['length'] += 1
 
+    def checkLocalCollision(self, headPos):
+        snake = self.snake
+        if headPos in snake['body'] and snake['length'] > 3:
+            return 'self'
+        if headPos[0] < 0 or headPos[0] >= self.GRIDWIDTH or headPos[1] < 0 or headPos[1] >= self.GRIDHEIGHT:
+            return 'wall'
+        for element in self.environment:
+            if element['type'] == 'rect':
+                if tuple(headPos) == tuple(element['pos']):
+                    return 'snake'
+            elif element['type'] == 'food':
+                if tuple(headPos) == tuple(element['pos']):
+                    return 'food'
+
     def processSnakeChange(self):
         moveQueue = []
         for event in pygame.event.get():
@@ -185,6 +199,16 @@ class snakeGame:
             self.snake['body'] = self.snake['body'][1:]
 
         self.snake['head'] = (self.snake['head'][0] + self.x_change, self.snake['head'][1] + self.y_change)
+
+        collision = self.checkLocalCollision(self.snake['head'])
+        if collision == 'wall':
+            self.quitProgram()
+        elif collision == 'food':
+            self.increaseSnakeLength()
+        elif collision == 'self':
+            self.quitProgram()
+        elif collision == 'snake':
+            self.quitProgram()
 
     def playFrame(self):
         self.screen.fill(BLACK)

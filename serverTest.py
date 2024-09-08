@@ -140,7 +140,7 @@ def gameThread(gameID):
             'type': 'startGame',
             'data': {'id': gameID, 'start':'for real this time'}
         })
-    while True:
+    while games[gameID]['state'] == 'running':
         for client in gameClients:
             try:
                 sendToClient(client.id, {
@@ -149,6 +149,11 @@ def gameThread(gameID):
                 })
             except KeyError:
                 continue
+            except RuntimeError:
+                continue
+        if len(gameClients) == 0:
+            games[gameID]['state'] = 'over'
+            return
 
 while True:
     try:
@@ -183,10 +188,12 @@ while True:
 
         elif data['type'] == 'disconnect':
             clientID = data['data']['id']
-            del clients[clientID]
-
             sendToClient(clientID, {'type': 'disconnect', 'data': {'id': clientID}})
             ct.printStatus(f"Client disconnected: {clientID} / {clients[clientID].name}")
+            for gameID in games:
+                if clientID in games[gameID]['players']:
+                    games[gameID]['players'].remove(clientID)
+            del clients[clientID]
 
         elif data['type'] == 'createGame':
             gameID = newGame()

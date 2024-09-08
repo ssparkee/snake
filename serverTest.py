@@ -44,7 +44,7 @@ def getClientsInGame(gameID):
     return [client for client in clients.values() if client.gameID == gameID]
 
 def newGame():
-    gameID = str(uuid4())
+    gameID = str(randint(1000, 9999))
     games[gameID] = {
         'id': gameID,
         'players': [],
@@ -108,7 +108,6 @@ def getEnvironmentExclusive(gameID, clientID):
     environment = []
     for client in getClientsInGame(gameID):
         if client.id != clientID:
-            print('not same')
             for i in getPlayerEnvironment(client.id):
                 environment.append(i)
     for food in games[gameID]['food']:
@@ -147,21 +146,27 @@ def createSnakeSpawn(gameID):
     return ({'length':3, 'head': headPos, 'body': body, 'direction': direction, 'last': (0, 0)}, direction[0])
 
 def gameThread(gameID):
+    sleep(2)
+    gameClients = getClientsInGame(gameID)
+    for client in gameClients:
+        sendToClient(client.id, {
+            'type': 'updateEnvironment',
+            'data': {'environment': getEnvironmentExclusive(gameID, client.id), 'collision': (False, None, None)
+        }})
     sleep(5)
     gameClients = getClientsInGame(gameID)
     for client in gameClients:
-        print('sending start')
         sendToClient(client.id, {
             'type': 'startGame',
             'data': {'id': gameID, 'start':'for real this time'}
         })
     while games[gameID]['state'] == 'running':
         for client in gameClients:
-            if int(time()) - int(clients[client.id].lastMessageTimestamp) > 8:
-                ct.printWarning(f"Client {client.id} timed out!")
-                games[gameID]['players'].remove(client.id)
-                del clients[client.id]
             try:
+                if int(time()) - int(clients[client.id].lastMessageTimestamp) > 8:
+                    ct.printWarning(f"Client {client.id} timed out!")
+                    games[gameID]['players'].remove(client.id)
+                    del clients[client.id]
                 sendToClient(client.id, {
                     'type': 'updateEnvironment',
                     'data': {'environment': getEnvironmentExclusive(gameID, client.id), 'collision': isOccupied(gameID, client.snake['head'][0], client.snake['head'][1], clientID=client.id)}
@@ -236,6 +241,11 @@ while True:
 
             sendToClient(clientID, {'type': 'joinGame', 'data': {'id': gameID}})
             ct.printStatus(f"Game joined: {gameID} with player {clientID} / {clients[clientID].name}")
+
+        elif data['type'] == 'gameStatus':
+            clientID = data['data']['id']
+            gameID = clients[clientID].gameID
+            sendToClient(clientID, {'type': 'gameStatus', 'data': {'state': games[gameID]['state'], 'players': games[gameID]['players']}})
 
         elif data['type'] == 'startGameReq':
             gameID = data['data']['gameID']

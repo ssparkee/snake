@@ -107,8 +107,8 @@ class snakeGame:
     def getSnakeAsEnvironment(self):
         snake = []
         for i in self.snake['body']:
-            snake.append({'type': 'rect', 'colour': (50, 125, 0), 'rect': [i[0]*self.BLOCKSIZE, i[1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE]})
-        snake.append({'type': 'rect', 'colour': (180, 20, 0), 'rect': [self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE]})
+            snake.append({'type': 'rect', 'colour': (50, 125, 0), 'pos':(i[0], i[1]), 'rect': [i[0]*self.BLOCKSIZE, i[1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE]})
+        snake.append({'type': 'rect', 'colour': (0, 0, 255), 'pos': (self.snake['head'][0], self.snake['head'][1]), 'rect': [self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE]})
         snake.append({'type': 'circle', 'colour': (255, 255, 255), 'pos': self.getEyes(self.BLOCKSIZE//8, self.snake['direction'], pygame.Rect(self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE))[0], 'radius': self.BLOCKSIZE//8})
         snake.append({'type': 'circle', 'colour': (255, 255, 255), 'pos': self.getEyes(self.BLOCKSIZE//8, self.snake['direction'], pygame.Rect(self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE))[1], 'radius': self.BLOCKSIZE//8})
         return snake
@@ -147,7 +147,7 @@ class snakeGame:
             eye1Pos = (headRect.right - offset * 2, headRect.top + offset)
             eye2Pos = (headRect.right - offset * 2, headRect.bottom - offset * 2)
         
-        return eye1Pos, eye2Pos
+        return (eye1Pos, eye2Pos)
     
     def drawApple(self, applePos):
         pygame.draw.circle(self.screen, 

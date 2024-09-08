@@ -94,6 +94,19 @@ def commandThread():
         except KeyboardInterrupt:
             break
 
+
+def getLocalIP():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        localIP = s.getsockname()[0]
+    except Exception as e:
+        localIP = "Unable to get local IP"
+    finally:
+        s.close()
+
+    return localIP
+
 def getIPList():
     listfile = open('iplist', 'r')
     ipList = []
@@ -107,34 +120,43 @@ def addToIPList(ip):
     listfile.write(ip + '\n')
     listfile.close()
 
-def attemptConnection(ipList):
+def attemptConnection(ipList, testLocal=True):
     data, addr = None, None
     clientSocket.settimeout(0.3)
     for ip in ipList:
         try:
             clientSocket.sendto(json.dumps({'type': 'ping', 'data': {}}).encode(), (ip, 65432))
             data, addr = clientSocket.recvfrom(4096)
+            return ip
         except Exception as e:
             if type(e) == socket.timeout:
                 continue
             elif type(e) == KeyboardInterrupt:
                 break
             elif type(e) == TimeoutError:
-                break
+                continue
             else:
                 print("Error:", e)
                 continue
-        if data is not None:
-            return ip
+    if testLocal:
+        try:
+            ip = getLocalIP()
+            clientSocket.sendto(json.dumps({'type': 'ping', 'data': {}}).encode(), (ip, 65432))
+            data, addr = clientSocket.recvfrom(4096)
+            if data is not None:
+                addToIPList(ip)
+                return ip
+        except Exception:
+            return None
     return None
 
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 SERVER_IP = attemptConnection(getIPList())
 
-if SERVER_IP is None:
-    SERVER_IP = input('server could not be found. Enter ip: ')
-    addToIPList(SERVER_IP)
+while SERVER_IP is None:
+    i = input('server could not be found. Enter ip: ')
+    SERVER_IP = attemptConnection([i], False)
 
 name = input('enter name: ')
 clientSocket.settimeout(0.1)
@@ -168,7 +190,6 @@ while clientID is None:
             print("Error:", e)
             continue
 
-
 socketThread = threading.Thread(target=socketListener)
 socketThread.start()
 
@@ -177,6 +198,8 @@ testThread.start()
 
 while gameStart == 0:
     try:
+        if gameID is not None:
+            clientSocket.sendto(json.dumps({'type': 'gameStatus', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
         sleep(0.1)
     except KeyboardInterrupt:
         break
@@ -185,10 +208,11 @@ while gameStart == 0:
 
 testThread.join(timeout=0.1)
 snakeGame = snake.snakeGame((800, 600), 40, snakeInfo)
+clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {'id': clientID, 'snake': snakeGame.snake, 'environment': snakeGame.getSnakeAsEnvironment()}}).encode(), (SERVER_IP, 65432))
 sleep(0.1)
 while gameStart == 1:
     try:
-        snakeGame.updateEnvironment([])
+        snakeGame.updateEnvironment(gameEnvironment)
         snakeGame.getMoveQueue()
         snakeGame.moveQueue = []
         snakeGame.playFrame()

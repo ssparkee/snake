@@ -2,7 +2,7 @@ import socket
 from uuid import uuid4
 import json
 import pygame
-import colouredText as ct
+import modules.colouredText as ct
 from random import randint
 import threading
 from time import sleep, time

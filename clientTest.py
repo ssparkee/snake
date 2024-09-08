@@ -2,8 +2,8 @@ import socket
 import json
 import threading
 from time import sleep
-import colouredText as ct
-import snake
+import modules.colouredText as ct
+import modules.snake
 
 def socketListener():
     global gameID, gameHost, snakeInfo, gameStart, gameEnvironment, collision, snakeGame
@@ -23,7 +23,6 @@ def socketListener():
                 continue
 
         try:
-            #print(f"Received: {data}")
             data = json.loads(data)
             if data['type'] == 'disconnect':
                 break
@@ -108,7 +107,7 @@ def getLocalIP():
     return localIP
 
 def getIPList():
-    listfile = open('iplist', 'r')
+    listfile = open('server util/iplist', 'r')
     ipList = []
     for line in listfile:
         ipList.append(line.strip())
@@ -116,7 +115,7 @@ def getIPList():
     return ipList
 
 def addToIPList(ip):
-    listfile = open('iplist', 'a')
+    listfile = open('server util/iplist', 'a')
     listfile.write(ip + '\n')
     listfile.close()
 

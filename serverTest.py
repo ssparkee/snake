@@ -5,7 +5,8 @@ import pygame
 import colouredText as ct
 from random import randint
 import threading
-from time import sleep
+from time import sleep, time
+
 
 class Client:
     def __init__(self, name, clientID, addr, gameID=None):
@@ -21,6 +22,7 @@ class Client:
         self.addr = addr
         self.gameID = gameID
         self.environment = []
+        self.lastMessageTimestamp = str(int(time()))
 
     def connectToGame(self, gameID):
         self.gameID = gameID
@@ -82,7 +84,6 @@ ct.printStatus(f"UDP Server is listening, IP: {SERVER_IP}")
 
 def sendToClient(clientID, data):
     serverSocket.sendto(json.dumps(data).encode(), clients[clientID].addr)
-
 
 def getPlayerSnake(gameID, clientID):
     return clients[clientID].snake
@@ -146,15 +147,20 @@ def createSnakeSpawn(gameID):
     return ({'length':3, 'head': headPos, 'body': body, 'direction': direction, 'last': (0, 0)}, direction[0])
 
 def gameThread(gameID):
-    sleep(1)
+    sleep(3)
     gameClients = getClientsInGame(gameID)
     for client in gameClients:
+        print('sending start')
         sendToClient(client.id, {
             'type': 'startGame',
             'data': {'id': gameID, 'start':'for real this time'}
         })
     while games[gameID]['state'] == 'running':
         for client in gameClients:
+            if int(time()) - int(clients[client.id].lastMessageTimestamp) > 5:
+                ct.printWarning(f"Client {client.id} timed out!")
+                games[gameID]['players'].remove(client.id)
+                del clients[client.id]
             try:
                 sendToClient(client.id, {
                     'type': 'updateEnvironment',
@@ -164,7 +170,8 @@ def gameThread(gameID):
                 continue
             except RuntimeError:
                 continue
-        if len(gameClients) == 0:
+        if len(getClientsInGame(gameID)) == 0:
+            ct.printStatus(f"Game {gameID} has no players, ending game")
             games[gameID]['state'] = 'over'
             return
 
@@ -186,9 +193,11 @@ while True:
         else:
             print("Error:", e)
             continue
-
     try:
         data = json.loads(data)
+
+        if data['type'] != 'ping' and data['type'] != 'connect':
+            clients[data['data']['id']].lastMessageTimestamp = str(int(time()))
 
         if data['type'] == 'connect':
             clientID = str(uuid4())

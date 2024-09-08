@@ -6,7 +6,7 @@ import colouredText as ct
 import snake
 
 def socketListener():
-    global gameID, gameHost, snakeInfo, gameStart, gameEnvironment, collision
+    global gameID, gameHost, snakeInfo, gameStart, gameEnvironment, collision, snakeGame
     while True:
         try:
             data, addr = clientSocket.recvfrom(4096)
@@ -40,11 +40,12 @@ def socketListener():
                     ct.printWarning(
                         f"Game start failed: {data['data']['message']}")
                 else:
-                    ct.printStatus(f"Game started: {data['data']['id']}")
+                    ct.printStatus(f"Game starting soon: {data['data']['id']}")
                     snakeInfo = data['data']['snakeInfo']
+                    gameStart = 1
             elif data['type'] == 'startGame':
                 ct.printStatus(f"Game started: {data['data']['id']}")
-                gameStart = True
+                gameStart = 2
             elif data['type'] == 'updateEnvironment':
                 gameEnvironment = data['data']['environment']
                 collision = data['data']['collision']
@@ -141,7 +142,7 @@ clientID = None
 gameID = None
 gameHost = False
 snakeGame = None
-gameStart = False
+gameStart = 0
 gameEnvironment = []
 snakeInfo = []
 collision = (False, None, None)
@@ -172,15 +173,21 @@ socketThread.start()
 testThread = threading.Thread(target=commandThread, daemon=True)
 testThread.start()
 
-while not gameStart:
+while gameStart == 0:
     try:
         sleep(0.1)
     except KeyboardInterrupt:
         break
 
 testThread.join(timeout=0.1)
-
 snakeGame = snake.snakeGame((800, 600), 40, snakeInfo)
+while gameStart == 1:
+    try:
+        snakeGame.playFrame()
+        sleep(0.15)
+    except KeyboardInterrupt:
+        break
+
 snakeGame.startGame()
 
 while snakeGame.running:

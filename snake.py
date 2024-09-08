@@ -1,5 +1,7 @@
 import pygame
 from random import randint
+import ctypes
+from time import sleep
 
 from pygame.locals import (
     K_UP,
@@ -55,14 +57,23 @@ class snakeGame:
         self.snake = snakeInfo[0]
         self.x_change = snakeInfo[1]
         self.y_change = 0
+        self.snake['direction'] = (self.x_change, self.y_change)
         self.velocity = 1
         self.environment = []
         self.running = True
-
-    def startGame(self):
         pygame.init()
         self.screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+        pygame.display.set_caption('Snake')
         self.clock = pygame.time.Clock()
+        sleep(0.1)
+        user32 = ctypes.windll.user32
+        user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+        self.screen.fill(BLACK)
+        self.drawGrid()
+        self.drawSnake()
+        pygame.display.update()
+
+    def startGame(self):
         self.running = True
         self.gameOver = False
 
@@ -194,10 +205,24 @@ class snakeGame:
                 else:
                     movementOccured = False
                 if movementOccured:
+                    self.snake['direction'] = (self.x_change, self.y_change)
                     self.drawEyes()
                     break
 
-        self.snake['direction'] = (self.x_change, self.y_change)
+        collision = self.checkLocalCollision((self.snake['head'][0] + self.x_change, self.snake['head'][1] + self.y_change))
+        if collision == 'wall':
+            self.playFrame()
+            sleep(0.1)
+            self.quitProgram()
+        elif collision == 'self':
+            self.playFrame()
+            sleep(0.1)
+            self.quitProgram()
+        elif collision == 'snake':
+            self.playFrame()
+            sleep(0.1)
+            self.quitProgram()
+
         if self.x_change != 0 or self.y_change != 0:
             self.snake['last'] = self.snake['body'][1]
             self.snake['body'].append(self.snake['head'])
@@ -205,15 +230,8 @@ class snakeGame:
 
         self.snake['head'] = (self.snake['head'][0] + self.x_change, self.snake['head'][1] + self.y_change)
 
-        collision = self.checkLocalCollision(self.snake['head'])
-        if collision == 'wall':
-            self.quitProgram()
-        elif collision == 'food':
+        if collision == 'food':
             self.increaseSnakeLength()
-        elif collision == 'self':
-            self.quitProgram()
-        elif collision == 'snake':
-            self.quitProgram()
 
     def playFrame(self):
         self.screen.fill(BLACK)

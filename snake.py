@@ -101,6 +101,16 @@ class snakeGame:
         snake.append({'type': 'circle', 'colour': (255, 255, 255), 'pos': self.getEyes(self.BLOCKSIZE//8, self.snake['direction'], pygame.Rect(self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE))[1], 'radius': self.BLOCKSIZE//8})
         return snake
 
+    def drawEyes(self):
+        eyeSize = self.BLOCKSIZE // 8
+        eyeOffset = self.BLOCKSIZE // 8
+        headRect = pygame.Rect(self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE)
+
+        eye1Pos, eye2Pos = self.getEyes(eyeOffset, self.snake['direction'], headRect)
+
+        pygame.draw.circle(self.screen, (255, 255, 255), eye1Pos, eyeSize)
+        pygame.draw.circle(self.screen, (255, 255, 255), eye2Pos, eyeSize)
+
     def drawSnake(self):
         for i in self.snake['body']:
             bodyRect = pygame.Rect(i[0]*self.BLOCKSIZE, i[1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE)
@@ -109,13 +119,7 @@ class snakeGame:
         headRect = pygame.Rect(self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE)
         pygame.draw.rect(self.screen, (180, 20, 0), headRect)
 
-        eyeSize = self.BLOCKSIZE // 8
-        eyeOffset = self.BLOCKSIZE // 8
-
-        eye1Pos, eye2Pos = self.getEyes(eyeOffset, self.snake['direction'], headRect)
-
-        pygame.draw.circle(self.screen, (255, 255, 255), eye1Pos, eyeSize)
-        pygame.draw.circle(self.screen, (255, 255, 255), eye2Pos, eyeSize)
+        self.drawEyes()
     
     def getEyes(self, offset, direction, headRect):
         if direction == (0, -self.velocity):
@@ -190,6 +194,7 @@ class snakeGame:
                 else:
                     movementOccured = False
                 if movementOccured:
+                    self.drawEyes()
                     break
 
         self.snake['direction'] = (self.x_change, self.y_change)

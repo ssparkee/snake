@@ -148,13 +148,13 @@ snakeGame.startGame()
 while snakeGame.running:
     try:
         snakeGame.processSnakeChange()
+        if not snakeGame.running:
+            break
         clientSnake = snakeGame.snake
         clientEnvironment = snakeGame.getSnakeAsEnvironment()
 
         clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {'id': clientID, 'snake':clientSnake, 'environment':clientEnvironment}}).encode(), (SERVER_IP, 65432))
         
-        print(collision)
-
         snakeGame.updateEnvironment(gameEnvironment)
         
         snakeGame.drawEnvironment()

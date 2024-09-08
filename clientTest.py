@@ -3,7 +3,7 @@ import json
 import threading
 from time import sleep
 import modules.colouredText as ct
-import modules.snake
+import modules.snake as snake
 
 def socketListener():
     global gameID, gameHost, snakeInfo, gameStart, gameEnvironment, collision, snakeGame

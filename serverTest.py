@@ -48,6 +48,11 @@ def newGame():
     games[gameID] = {
         'id': gameID,
         'players': [],
+        'rules': {
+            'GRIDWIDTHPX': GRIDWIDTHPX,
+            'GRIDHEIGHTPX': GRIDHEIGHTPX,
+            'BLOCKSIZE': BLOCKSIZE
+        },
         'state': 'waiting',
         'food': [],
         'board': []
@@ -68,6 +73,11 @@ FOODCOUNT = 3
 gameExample = {
     'id': '1234',
     'players': ['1234', '5678'],
+    'rules': {
+                'GRIDWIDTHPX':GRIDWIDTHPX,
+                'GRIDHEIGHTPX': GRIDHEIGHTPX,
+                'BLOCKSIZE': BLOCKSIZE
+            },
     'state': 'running',
     'food': [(1, 1), (2, 2), (3, 3)],
     'objects': [pygame.Rect(0,0,40,40)]
@@ -267,8 +277,8 @@ while True:
                             'id': gameID,
                             'snakeInfo': createSnakeSpawn(gameID), 
                             'players': [client.id for client in gameClients],
-                            'gridpx': (GRIDWIDTHPX, GRIDHEIGHTPX),
-                            'blocksize': BLOCKSIZE
+                            'gridpx': (games[gameID]['rules']['GRIDWIDTHPX'], games[gameID]['rules']['GRIDHEIGHTPX']),
+                            'blocksize': games[gameID]['rules']['BLOCKSIZE']
                         }
                     })
                 
@@ -288,7 +298,7 @@ while True:
         if type(e) == json.decoder.JSONDecodeError:
             print("Invalid JSON received")
         elif type(e) == KeyError:
-            print("Invalid data received")
+            print("Invalid data received", e)
         else:
             print("Invalid data received", e)
             continue

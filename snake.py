@@ -60,7 +60,8 @@ class snakeGame:
         self.snake['direction'] = (self.x_change, self.y_change)
         self.velocity = 1
         self.environment = []
-        self.running = True
+        self.running = False
+        self.moveQueue = []
         pygame.init()
         self.screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
         pygame.display.set_caption('Snake')
@@ -172,24 +173,27 @@ class snakeGame:
                 if tuple(headPos) == tuple(element['pos']):
                     return 'food'
 
-    def processSnakeChange(self):
-        moveQueue = []
+    def getMoveQueue(self):
+        self.moveQueue = []
         for event in pygame.event.get():
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     self.quitProgram()
                 else:
-                    if isKeyInMoveKeys(event.key) and len(moveQueue) < 6:
-                        moveQueue.append(event.key)
+                    if isKeyInMoveKeys(event.key) and len(self.moveQueue) < 6:
+                        self.moveQueue.append(event.key)
             elif event.type == QUIT:
                 self.quitProgram()
 
-        if len(moveQueue) > 0:
+    def processSnakeChange(self):
+        self.getMoveQueue()
+
+        if len(self.moveQueue) > 0:
             movementOccured = True
             while True:
-                if len(moveQueue) == 0:
+                if len(self.moveQueue) == 0:
                     break
-                key = moveQueue.pop(0)
+                key = self.moveQueue.pop(0)
                 if key in moveKeys['up'] and self.y_change == 0:
                     self.x_change = 0
                     self.y_change = -self.velocity
@@ -233,10 +237,11 @@ class snakeGame:
         if collision == 'food':
             self.increaseSnakeLength()
 
-    def playFrame(self):
+    def playFrame(self, drawEnvironment=True):
         self.screen.fill(BLACK)
         self.drawGrid()
-        self.drawEnvironment()
+        if drawEnvironment:
+            self.drawEnvironment()
 
         self.drawSnake()
         pygame.display.update()

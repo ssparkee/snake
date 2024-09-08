@@ -116,7 +116,7 @@ def attemptConnection(ipList):
             data, addr = clientSocket.recvfrom(4096)
         except Exception as e:
             if type(e) == socket.timeout:
-                print('bad ip')
+                continue
             elif type(e) == KeyboardInterrupt:
                 break
             elif type(e) == TimeoutError:
@@ -162,6 +162,8 @@ while clientID is None:
             continue
         elif type(e) == KeyboardInterrupt:
             break
+        elif type(e) == WindowsError:
+            continue
         else:
             print("Error:", e)
             continue
@@ -178,15 +180,23 @@ while gameStart == 0:
         sleep(0.1)
     except KeyboardInterrupt:
         break
+    except Exception as e:
+        print(e)
 
 testThread.join(timeout=0.1)
 snakeGame = snake.snakeGame((800, 600), 40, snakeInfo)
+sleep(0.1)
 while gameStart == 1:
     try:
+        snakeGame.updateEnvironment([])
+        snakeGame.getMoveQueue()
+        snakeGame.moveQueue = []
         snakeGame.playFrame()
         sleep(0.15)
     except KeyboardInterrupt:
         break
+    except Exception as e:
+        print(e)
 
 snakeGame.startGame()
 
@@ -201,9 +211,6 @@ while snakeGame.running:
         clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {'id': clientID, 'snake':clientSnake, 'environment':clientEnvironment}}).encode(), (SERVER_IP, 65432))
         
         snakeGame.updateEnvironment(gameEnvironment)
-        
-        snakeGame.drawEnvironment()
-        gameEnvironment = []
 
         snakeGame.playFrame()
         sleep(0.15)

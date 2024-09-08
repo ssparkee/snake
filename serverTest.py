@@ -147,7 +147,7 @@ def createSnakeSpawn(gameID):
     return ({'length':3, 'head': headPos, 'body': body, 'direction': direction, 'last': (0, 0)}, direction[0])
 
 def gameThread(gameID):
-    sleep(3)
+    sleep(5)
     gameClients = getClientsInGame(gameID)
     for client in gameClients:
         print('sending start')
@@ -157,7 +157,7 @@ def gameThread(gameID):
         })
     while games[gameID]['state'] == 'running':
         for client in gameClients:
-            if int(time()) - int(clients[client.id].lastMessageTimestamp) > 5:
+            if int(time()) - int(clients[client.id].lastMessageTimestamp) > 8:
                 ct.printWarning(f"Client {client.id} timed out!")
                 games[gameID]['players'].remove(client.id)
                 del clients[client.id]

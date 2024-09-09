@@ -47,10 +47,8 @@ def socketListener():
                 gameStart = 2
             elif data['type'] == 'updateEnvironment':
                 gameEnvironment = data['data']['environment']
-                collision = data['data']['collision']
+                """collision = data['data']['collision']
                 if collision[0] and snakeGame is not None:
-                    pass
-                """
                     if collision[1] == 'wall':
                         snakeGame.quitProgram()
                         collision = (False, None, None)
@@ -208,7 +206,7 @@ while gameStart == 0:
 
 testThread.join(timeout=0.1)
 snakeGame = snake.snakeGame((800, 600), 40, snakeInfo)
-clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {'id': clientID, 'snake': snakeGame.snake, 'environment': snakeGame.getSnakeAsEnvironment()}}).encode(), (SERVER_IP, 65432))
+clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {'id': clientID, 'snake': snakeGame.snake}}).encode(), (SERVER_IP, 65432))
 sleep(0.1)
 while gameStart == 1:
     try:
@@ -230,9 +228,8 @@ while snakeGame.running:
         if not snakeGame.running:
             break
         clientSnake = snakeGame.snake
-        clientEnvironment = snakeGame.getSnakeAsEnvironment()
 
-        clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {'id': clientID, 'snake':clientSnake, 'environment':clientEnvironment}}).encode(), (SERVER_IP, 65432))
+        clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {'id': clientID, 'snake':clientSnake}}).encode(), (SERVER_IP, 65432))
         
         snakeGame.updateEnvironment(gameEnvironment)
 

@@ -104,7 +104,7 @@ def getFoodSpawn(gameID):
     GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
     GRIDHEIGHT = games[gameID]['rules']['GRIDHEIGHTPX'] // BLOCKSIZE
     foodPos = (randint(0, GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
-    while isOccupied(gameID, foodPos[0], foodPos[1])[0]:
+    while isOccupied(gameID, foodPos[0], foodPos[1], removeFood=False)[0]:
         foodPos = (randint(0, GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
     print('food:', foodPos)
     return foodPos
@@ -113,13 +113,12 @@ def getEnvironmentExclusive(gameID, clientID):
     environment = []
     for client in getClientsInGame(gameID):
         if client.id != clientID:
-            for i in getPlayerEnvironment(client.id):
-                environment.append(i)
+            environment.append({'type':'snake', 'snake':getPlayerSnake(gameID, client.id)})
     for food in games[gameID]['food']:
         environment.append({'type': 'food', 'pos': food})
     return environment
 
-def isOccupied(gameID, x, y, clientID=''):
+def isOccupied(gameID, x, y, clientID='', removeFood=True):
     BLOCKSIZE = games[gameID]['rules']['BLOCKSIZE']
     GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
     GRIDHEIGHT = games[gameID]['rules']['GRIDHEIGHTPX'] // BLOCKSIZE
@@ -129,6 +128,8 @@ def isOccupied(gameID, x, y, clientID=''):
             for part in client.snake['body']:
                 if part == [x, y]:
                     return (True, 'body', client.id)
+            if tuple(client.snake['head']) == (x, y):
+                return (True, 'head', client.id)
         else:
             if int(client.snake['length']) > 3:
                 for part in client.snake['body']:
@@ -137,8 +138,9 @@ def isOccupied(gameID, x, y, clientID=''):
     if x < 0 or x >= GRIDWIDTH or y < 0 or y >= GRIDHEIGHT:
         return (True, 'wall', None)
     if (x, y) in games[gameID]['food']:
-        games[gameID]['food'].remove((x, y))
-        games[gameID]['food'].append(getFoodSpawn(gameID))
+        if removeFood:
+            games[gameID]['food'].remove((x, y))
+            games[gameID]['food'].append(getFoodSpawn(gameID))
         return (True, 'food', None)
     return (False, None, None)
 
@@ -164,8 +166,8 @@ def gameThread(gameID):
     for client in gameClients:
         sendToClient(client.id, {
             'type': 'updateEnvironment',
-            'data': {'environment': getEnvironmentExclusive(gameID, client.id), 'collision': (False, None, None)
-        }})
+            'data': {'environment': getEnvironmentExclusive(gameID, client.id)}
+        })
     sleep(5)
     gameClients = getClientsInGame(gameID)
     for client in gameClients:
@@ -185,15 +187,14 @@ def gameThread(gameID):
                         'type': 'updateEnvironment',
                         'data': {
                             'environment': getEnvironmentExclusive(gameID, client.id), 
-                            'collision': isOccupied(gameID, client.snake['head'][0], client.snake['head'][1], clientID=client.id
-                        )}
+                        }
                     })
             except KeyError:
                 continue
             except RuntimeError:
                 continue
         if len(getClientsInGame(gameID)) == 0:
-            ct.printStatus(f"Game {gameID} has no players, ending game")
+            ct.printStatus(f"Game {games[gameID]['code']} has no players, ending game")
             games[gameID]['state'] = 'over'
             return
 
@@ -302,7 +303,7 @@ while True:
             gameID = clients[clientID].gameID
             
             setPlayerSnake(gameID, clientID, data['data']['snake'])
-            setPlayerEnvironment(gameID, clientID, data['data']['environment'])
+            #setPlayerEnvironment(gameID, clientID, data['data']['environment'])
 
     except Exception as e:
         if type(e) == json.decoder.JSONDecodeError:

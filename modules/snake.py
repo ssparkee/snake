@@ -71,7 +71,7 @@ class snakeGame:
         user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
         self.screen.fill(BLACK)
         self.drawGrid()
-        self.drawSnake()
+        self.drawSnake(self.snake)
         pygame.display.update()
 
     def startGame(self):
@@ -99,39 +99,44 @@ class snakeGame:
         for element in self.environment:
             if element['type'] == 'food':
                 self.drawApple(element['pos'])
+            if element['type'] == 'snake':
+                self.drawSnake(element['snake'], headColour=(0, 0, 255))
+            """
             elif element['type'] == 'rect':
                 pygame.draw.rect(self.screen, element['colour'], dictToRect(element))
             elif element['type'] == 'circle':
-                pygame.draw.circle(self.screen, element['colour'], element['pos'], element['radius'])
+                pygame.draw.circle(self.screen, element['colour'], element['pos'], element['radius'])"""
 
     def getSnakeAsEnvironment(self):
+        return self.snake
+        """
         snake = []
         for i in self.snake['body']:
             snake.append({'type': 'rect', 'colour': (50, 125, 0), 'pos':(i[0], i[1]), 'rect': [i[0]*self.BLOCKSIZE, i[1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE]})
         snake.append({'type': 'rect', 'colour': (0, 0, 255), 'pos': (self.snake['head'][0], self.snake['head'][1]), 'rect': [self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE]})
         snake.append({'type': 'circle', 'colour': (255, 255, 255), 'pos': self.getEyes(self.BLOCKSIZE//8, self.snake['direction'], pygame.Rect(self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE))[0], 'radius': self.BLOCKSIZE//8})
         snake.append({'type': 'circle', 'colour': (255, 255, 255), 'pos': self.getEyes(self.BLOCKSIZE//8, self.snake['direction'], pygame.Rect(self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE))[1], 'radius': self.BLOCKSIZE//8})
-        return snake
+        return snake"""
 
-    def drawEyes(self):
+    def drawEyes(self, snake):
         eyeSize = self.BLOCKSIZE // 8
         eyeOffset = self.BLOCKSIZE // 8
-        headRect = pygame.Rect(self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE)
+        headRect = pygame.Rect(snake['head'][0]*self.BLOCKSIZE, snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE)
 
-        eye1Pos, eye2Pos = self.getEyes(eyeOffset, self.snake['direction'], headRect)
+        eye1Pos, eye2Pos = self.getEyes(eyeOffset, tuple(snake['direction']), headRect)
 
         pygame.draw.circle(self.screen, (255, 255, 255), eye1Pos, eyeSize)
         pygame.draw.circle(self.screen, (255, 255, 255), eye2Pos, eyeSize)
 
-    def drawSnake(self):
-        for i in self.snake['body']:
+    def drawSnake(self, snake, headColour=(180, 20, 0)):
+        for i in snake['body']:
             bodyRect = pygame.Rect(i[0]*self.BLOCKSIZE, i[1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE)
             pygame.draw.rect(self.screen, (50, 125, 0), bodyRect)
         
-        headRect = pygame.Rect(self.snake['head'][0]*self.BLOCKSIZE, self.snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE)
-        pygame.draw.rect(self.screen, (180, 20, 0), headRect)
+        headRect = pygame.Rect(snake['head'][0]*self.BLOCKSIZE, snake['head'][1]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE)
+        pygame.draw.rect(self.screen, headColour, headRect)
 
-        self.drawEyes()
+        self.drawEyes(snake)
 
     def drawScore(self):
         score = pygame.font.Font('freesansbold.ttf', 32).render(f'Score: {self.snake["length"]}', True, (255,255,255), (0,0,0))
@@ -140,6 +145,7 @@ class snakeGame:
         self.screen.blit(score, textRect)
     
     def getEyes(self, offset, direction, headRect):
+        eye1Pos, eye2Pos = (0, 0), (0, 0)
         if direction == (0, -self.velocity):
             eye1Pos = (headRect.left + offset, headRect.top + offset)
             eye2Pos = (headRect.right - offset * 2, headRect.top + offset)
@@ -178,6 +184,12 @@ class snakeGame:
             elif element['type'] == 'food':
                 if tuple(headPos) == tuple(element['pos']):
                     return 'food'
+            elif element['type'] == 'snake':
+                print(element['snake']['body'])
+                if list(headPos) in element['snake']['body']:
+                    return 'snake'
+                if tuple(headPos) == tuple(element['snake']['head']):
+                    return 'head'
 
     def getMoveQueue(self):
         for event in pygame.event.get():
@@ -215,7 +227,7 @@ class snakeGame:
                     movementOccured = False
                 if movementOccured:
                     self.snake['direction'] = (self.x_change, self.y_change)
-                    self.drawEyes()
+                    self.drawEyes(self.snake)
                     break
 
         collision = self.checkLocalCollision((self.snake['head'][0] + self.x_change, self.snake['head'][1] + self.y_change))
@@ -228,6 +240,10 @@ class snakeGame:
             sleep(0.1)
             self.quitProgram()
         elif collision == 'snake':
+            self.playFrame()
+            sleep(0.1)
+            self.quitProgram()
+        elif collision == 'head':
             self.playFrame()
             sleep(0.1)
             self.quitProgram()
@@ -248,6 +264,6 @@ class snakeGame:
         if drawEnvironment:
             self.drawEnvironment()
 
-        self.drawSnake()
+        self.drawSnake(self.snake)
         self.drawScore()
         pygame.display.update()

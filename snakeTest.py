@@ -193,6 +193,12 @@ def createSnake():
     body = [headPos, headPos]
     return ({'length': 3, 'head': headPos, 'body': body, 'direction': direction, 'last': (0, 0)}, direction[0])
 
+def drawScore():
+    score = pygame.font.Font('freesansbold.ttf', 32).render(f'Score: {snake["length"]}', True, (255,255,255), (0,0,0))
+    textRect = score.get_rect()
+    textRect.center = (textRect.width/2 + 10, SCREENHEIGHT-50)
+    screen.blit(score, textRect)
+
 snake, x_change = createSnake()
 while True:
     screen.fill(BLACK)
@@ -217,6 +223,7 @@ while True:
 
     drawSnake(snake)
     drawApple(applePos)
+    drawScore()
 
     pygame.display.update()
     CLOCK.tick(5)                

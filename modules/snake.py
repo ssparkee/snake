@@ -132,6 +132,12 @@ class snakeGame:
         pygame.draw.rect(self.screen, (180, 20, 0), headRect)
 
         self.drawEyes()
+
+    def drawScore(self):
+        score = pygame.font.Font('freesansbold.ttf', 32).render(f'Score: {self.snake["length"]}', True, (255,255,255), (0,0,0))
+        textRect = score.get_rect()
+        textRect.center = (textRect.width/2 + 10, SCREENHEIGHT-50)
+        self.screen.blit(score, textRect)
     
     def getEyes(self, offset, direction, headRect):
         if direction == (0, -self.velocity):
@@ -244,4 +250,5 @@ class snakeGame:
             self.drawEnvironment()
 
         self.drawSnake()
+        self.drawScore()
         pygame.display.update()

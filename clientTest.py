@@ -27,7 +27,7 @@ def socketListener():
             if data['type'] == 'disconnect':
                 break
             elif data['type'] == 'createGame':
-                ct.printStatus(f"Game created: {data['data']['id']}")
+                ct.printStatus(f"Game created: {data['data']['code']}")
                 gameID = data['data']['id']
                 gameHost = True
             elif data['type'] == 'joinGame':
@@ -107,7 +107,7 @@ def getLocalIP():
     return localIP
 
 def getIPList():
-    listfile = open('server util/iplist', 'r')
+    listfile = open('modules/iplist', 'r')
     ipList = []
     for line in listfile:
         ipList.append(line.strip())
@@ -115,7 +115,7 @@ def getIPList():
     return ipList
 
 def addToIPList(ip):
-    listfile = open('server util/iplist', 'a')
+    listfile = open('modules/iplist', 'a')
     listfile.write(ip + '\n')
     listfile.close()
 
@@ -145,7 +145,7 @@ def attemptConnection(ipList, testLocal=True):
             if data is not None:
                 addToIPList(ip)
                 return ip
-        except Exception:
+        except:
             return None
     return None
 
@@ -156,6 +156,7 @@ SERVER_IP = attemptConnection(getIPList())
 while SERVER_IP is None:
     i = input('server could not be found. Enter ip: ')
     SERVER_IP = attemptConnection([i], False)
+addToIPList(SERVER_IP)
 
 name = input('enter name: ')
 clientSocket.settimeout(0.1)

@@ -44,16 +44,20 @@ def getClientsInGame(gameID):
     return [client for client in clients.values() if client.gameID == gameID]
 
 def newGame():
-    gameID = str(randint(1000, 9999))
+    gameCode = str(randint(1000, 9999))
+    gameID = str(uuid4())
     games[gameID] = {
         'id': gameID,
+        'code': gameCode,
         'players': [],
         'rules': {
             'GRIDWIDTHPX': GRIDWIDTHPX,
             'GRIDHEIGHTPX': GRIDHEIGHTPX,
-            'BLOCKSIZE': BLOCKSIZE
+            'BLOCKSIZE': BLOCKSIZE,
+            'FOODCOUNT': FOODCOUNT,
         },
         'state': 'waiting',
+        'public': False,
         'food': [],
         'board': []
     }
@@ -70,21 +74,9 @@ GRIDWIDTH = GRIDWIDTHPX // BLOCKSIZE
 GRIDHEIGHT = GRIDHEIGHTPX // BLOCKSIZE
 FOODCOUNT = 3
 
-gameExample = {
-    'id': '1234',
-    'players': ['1234', '5678'],
-    'rules': {
-                'GRIDWIDTHPX':GRIDWIDTHPX,
-                'GRIDHEIGHTPX': GRIDHEIGHTPX,
-                'BLOCKSIZE': BLOCKSIZE
-            },
-    'state': 'running',
-    'food': [(1, 1), (2, 2), (3, 3)],
-    'objects': [pygame.Rect(0,0,40,40)]
-}
-
 SERVER_IP = getLocalIP()
 MINPLAYERS = 1
+TIMEOUT = 8
 
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 serverSocket.bind((SERVER_IP, 65432))
@@ -108,6 +100,9 @@ def getPlayerEnvironment(clientID):
     return clients[clientID].environment
 
 def getFoodSpawn(gameID):
+    BLOCKSIZE = games[gameID]['rules']['BLOCKSIZE']
+    GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
+    GRIDHEIGHT = games[gameID]['rules']['GRIDHEIGHTPX'] // BLOCKSIZE
     foodPos = (randint(0, GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
     while isOccupied(gameID, foodPos[0], foodPos[1])[0]:
         foodPos = (randint(0, GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
@@ -125,6 +120,10 @@ def getEnvironmentExclusive(gameID, clientID):
     return environment
 
 def isOccupied(gameID, x, y, clientID=''):
+    BLOCKSIZE = games[gameID]['rules']['BLOCKSIZE']
+    GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
+    GRIDHEIGHT = games[gameID]['rules']['GRIDHEIGHTPX'] // BLOCKSIZE
+
     for client in getClientsInGame(gameID):
         if client.id != clientID:
             for part in client.snake['body']:
@@ -144,8 +143,12 @@ def isOccupied(gameID, x, y, clientID=''):
     return (False, None, None)
 
 def createSnakeSpawn(gameID):
+    BLOCKSIZE = games[gameID]['rules']['BLOCKSIZE']
+    GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
+    GRIDHEIGHT = games[gameID]['rules']['GRIDHEIGHTPX'] // BLOCKSIZE
+
     headPos = (randint(0, 1) * (GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
-    while isOccupied(gameID, headPos[0], headPos[1])[0]:
+    while isOccupied(gameID, headPos[0], headPos[1])[0] or isOccupied(gameID, headPos[0], headPos[1]+1)[0] or isOccupied(gameID, headPos[0], headPos[1]-1)[0]:
         headPos = (randint(0, 1) * (GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
 
     if headPos[0] == 0:
@@ -173,7 +176,7 @@ def gameThread(gameID):
     while games[gameID]['state'] == 'running':
         for client in gameClients:
             try:
-                if int(time()) - int(clients[client.id].lastMessageTimestamp) > 8:
+                if int(time()) - int(clients[client.id].lastMessageTimestamp) > TIMEOUT:
                     ct.printWarning(f"Client {client.id} timed out!")
                     games[gameID]['players'].remove(client.id)
                     del clients[client.id]
@@ -240,11 +243,15 @@ while True:
             clients[clientID].connectToGame(gameID)
             games[gameID]['players'].append(clientID)
 
-            sendToClient(clientID, {'type': 'createGame', 'data': {'id': gameID}})
+            sendToClient(clientID, {'type': 'createGame', 'data': {'id': gameID, 'code': games[gameID]['code']}})
             ct.printStatus(f"Game created: {gameID} with host {clientID} / {clients[clientID].name}")
 
         elif data['type'] == 'joinGame':
-            gameID = data['data']['gameID']
+            gameCode = data['data']['code']
+            for i in games:
+                if games[i]['code'] == gameCode:
+                    gameID = gameID
+                    break
             clientID = data['data']['id']
             clients[clientID].connectToGame(gameID)
             games[gameID]['players'].append(clientID)
@@ -266,8 +273,7 @@ while True:
                 continue
             else:
                 games[gameID]['state'] = 'running'
-                games[gameID]['food'] = [getFoodSpawn(gameID) for i in range(FOODCOUNT)]
-                #sendToClient(clientID, {'type': 'startGame', 'data': {'id': gameID}})
+                games[gameID]['food'] = [getFoodSpawn(gameID) for i in range(games[gameID]['rules']['FOODCOUNT'])]
 
                 gameClients = getClientsInGame(gameID)
                 for client in gameClients:

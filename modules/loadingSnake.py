@@ -17,7 +17,7 @@ num_segments = 12
 angle_step = 2 * math.pi / num_segments
 
 
-def setScreenDimensions(width, height):
+def init(width, height):
     global WIDTH, HEIGHT, center, circle_positions
     WIDTH = width
     HEIGHT = height

@@ -77,8 +77,8 @@ def commandThread():
             elif data == 'createGame':
                 clientSocket.sendto(json.dumps({'type': 'createGame', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
             elif data == 'joinGame':
-                userGameID = input('enter game id: ')
-                clientSocket.sendto(json.dumps({'type': 'joinGame', 'data': {'id': clientID, 'gameID': userGameID}}).encode(), (SERVER_IP, 65432))
+                userGameID = input('enter game code: ')
+                clientSocket.sendto(json.dumps({'type': 'joinGame', 'data': {'id': clientID, 'code': userGameID}}).encode(), (SERVER_IP, 65432))
                 return
             elif data == 'startGame':
                 if gameHost and gameID is not None:

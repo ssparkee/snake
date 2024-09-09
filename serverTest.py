@@ -180,10 +180,14 @@ def gameThread(gameID):
                     ct.printWarning(f"Client {client.id} timed out!")
                     games[gameID]['players'].remove(client.id)
                     del clients[client.id]
-                sendToClient(client.id, {
-                    'type': 'updateEnvironment',
-                    'data': {'environment': getEnvironmentExclusive(gameID, client.id), 'collision': isOccupied(gameID, client.snake['head'][0], client.snake['head'][1], clientID=client.id)}
-                })
+                else:
+                    sendToClient(client.id, {
+                        'type': 'updateEnvironment',
+                        'data': {
+                            'environment': getEnvironmentExclusive(gameID, client.id), 
+                            'collision': isOccupied(gameID, client.snake['head'][0], client.snake['head'][1], clientID=client.id
+                        )}
+                    })
             except KeyError:
                 continue
             except RuntimeError:

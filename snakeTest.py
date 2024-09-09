@@ -102,8 +102,9 @@ def isKeyInMoveKeys(key):
             return True
     return False
 
+moveQueue = []
 def processSnakeChange(snake, x_change, y_change):
-    moveQueue = []
+    global moveQueue
     for event in pygame.event.get():
         if event.type == KEYDOWN:
             if event.key == K_ESCAPE:

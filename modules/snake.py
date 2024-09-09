@@ -180,7 +180,6 @@ class snakeGame:
                     return 'food'
 
     def getMoveQueue(self):
-        self.moveQueue = []
         for event in pygame.event.get():
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:

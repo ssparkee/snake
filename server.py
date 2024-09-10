@@ -144,6 +144,11 @@ def isOccupied(gameID, x, y, clientID='', removeFood=True):
         return (True, 'food', None)
     return (False, None, None)
 
+def checkFood(x, y, gameID):
+    if (x, y) in games[gameID]['food']:
+        games[gameID]['food'].remove((x, y))
+        games[gameID]['food'].append(getFoodSpawn(gameID))
+
 def createSnakeSpawn(gameID):
     BLOCKSIZE = games[gameID]['rules']['BLOCKSIZE']
     GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
@@ -161,14 +166,14 @@ def createSnakeSpawn(gameID):
     return ({'length':3, 'head': headPos, 'body': body, 'direction': direction, 'last': (0, 0)}, direction[0])
 
 def gameThread(gameID):
-    sleep(2)
+    sleep(1)
     gameClients = getClientsInGame(gameID)
     for client in gameClients:
         sendToClient(client.id, {
             'type': 'updateEnvironment',
             'data': {'environment': getEnvironmentExclusive(gameID, client.id)}
         })
-    sleep(5)
+    sleep(2)
     gameClients = getClientsInGame(gameID)
     for client in gameClients:
         sendToClient(client.id, {
@@ -183,6 +188,7 @@ def gameThread(gameID):
                     games[gameID]['players'].remove(client.id)
                     del clients[client.id]
                 else:
+                    checkFood(client.snake['head'][0], client.snake['head'][1], gameID)
                     sendToClient(client.id, {
                         'type': 'updateEnvironment',
                         'data': {

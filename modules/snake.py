@@ -185,7 +185,6 @@ class snakeGame:
                 if tuple(headPos) == tuple(element['pos']):
                     return 'food'
             elif element['type'] == 'snake':
-                print(element['snake']['body'])
                 if list(headPos) in element['snake']['body']:
                     return 'snake'
                 if tuple(headPos) == tuple(element['snake']['head']):

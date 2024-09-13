@@ -43,7 +43,7 @@ eye_radius = 2
 eye_offset = 7
 current_segment = 0
 
-def drawLoadingSnake(clock, screen):
+def drawLoadingSnake(clock, screen, moveSegments=True):
     global current_segment
 
     apple_position = (current_segment + 2) % num_segments
@@ -54,10 +54,10 @@ def drawLoadingSnake(clock, screen):
     pygame.draw.circle(screen, apple_color,
                        circle_positions[apple_position], 10)
 
-    for i in range(snake_length - 1, 0, -1):
-        snake_segments[i] = snake_segments[i - 1]
-
-    snake_segments[0] = current_segment
+    if moveSegments:
+        for i in range(snake_length - 1, 0, -1):
+            snake_segments[i] = snake_segments[i - 1]
+        snake_segments[0] = current_segment
 
     head_position = circle_positions[snake_segments[0]]
     apple_pos = circle_positions[apple_position]
@@ -108,4 +108,5 @@ def drawLoadingSnake(clock, screen):
             pygame.draw.circle(screen, body_color,
                                circle_positions[segment], 10)
 
-    current_segment = (current_segment + 1) % num_segments
+    if moveSegments:
+        current_segment = (current_segment + 1) % num_segments

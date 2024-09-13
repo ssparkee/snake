@@ -4,6 +4,7 @@ import threading
 from time import sleep
 import modules.colouredText as ct
 import modules.snake as snake
+import modules.ipList as ipList
 
 def socketListener():
     global gameID, gameHost, snakeInfo, gameStart, gameEnvironment, collision, snakeGame
@@ -34,6 +35,8 @@ def socketListener():
                 ct.printStatus(f"Game joined: {data['data']['id']}")
                 gameID = data['data']['id']
                 gameHost = False
+            elif data['type'] == 'getGames':
+                ct.printStatus(f"Games: {data['data']['games']}")
             elif data['type'] == 'startGameRes':
                 if 'fail' in data['data']:
                     ct.printWarning(
@@ -47,20 +50,6 @@ def socketListener():
                 gameStart = 2
             elif data['type'] == 'updateEnvironment':
                 gameEnvironment = data['data']['environment']
-                """collision = data['data']['collision']
-                if collision[0] and snakeGame is not None:
-                    if collision[1] == 'wall':
-                        snakeGame.quitProgram()
-                        collision = (False, None, None)
-                    elif collision[1] == 'food':
-                        snakeGame.increaseSnakeLength()
-                        collision = (False, None, None)
-                    elif collision[1] == 'body':
-                        snakeGame.quitProgram()
-                        collision = (False, None, None)
-                    elif collision[1] == 'self':
-                        snakeGame.quitProgram()
-                        collision = (False, None, None)"""
         except Exception as e:
             ct.printError(f"Error: {e}")
             break
@@ -78,6 +67,8 @@ def commandThread():
                 userGameID = input('enter game code: ')
                 clientSocket.sendto(json.dumps({'type': 'joinGame', 'data': {'id': clientID, 'code': userGameID}}).encode(), (SERVER_IP, 65432))
                 return
+            elif data == 'getGames':
+                clientSocket.sendto(json.dumps({'type': 'getGames', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
             elif data == 'startGame':
                 if gameHost and gameID is not None:
                     clientSocket.sendto(json.dumps({'type': 'startGameReq', 'data': {'id': clientID, 'gameID': gameID}}).encode(), (SERVER_IP, 65432))
@@ -91,32 +82,6 @@ def commandThread():
         except KeyboardInterrupt:
             break
 
-
-def getLocalIP():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(("8.8.8.8", 80))
-        localIP = s.getsockname()[0]
-    except Exception as e:
-        localIP = "Unable to get local IP"
-    finally:
-        s.close()
-
-    return localIP
-
-def getIPList():
-    listfile = open('modules/iplist', 'r')
-    ipList = []
-    for line in listfile:
-        ipList.append(line.strip())
-    listfile.close()
-    return ipList
-
-def addToIPList(ip):
-    listfile = open('modules/iplist', 'a')
-    listfile.write(ip + '\n')
-    listfile.close()
-
 def attemptConnection(ipList, testLocal=True):
     data, addr = None, None
     clientSocket.settimeout(0.3)
@@ -124,7 +89,9 @@ def attemptConnection(ipList, testLocal=True):
         try:
             clientSocket.sendto(json.dumps({'type': 'ping', 'data': {}}).encode(), (ip, 65432))
             data, addr = clientSocket.recvfrom(4096)
-            return ip
+            if data is not None:
+                print(data)
+                return ip
         except Exception as e:
             if type(e) == socket.timeout:
                 continue
@@ -137,11 +104,11 @@ def attemptConnection(ipList, testLocal=True):
                 continue
     if testLocal:
         try:
-            ip = getLocalIP()
+            ip = ipList.getLocalIP()
             clientSocket.sendto(json.dumps({'type': 'ping', 'data': {}}).encode(), (ip, 65432))
             data, addr = clientSocket.recvfrom(4096)
             if data is not None:
-                addToIPList(ip)
+                ipList.addToIPList(ip)
                 return ip
         except:
             return None
@@ -149,12 +116,13 @@ def attemptConnection(ipList, testLocal=True):
 
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-SERVER_IP = attemptConnection(getIPList())
+SERVER_IP = attemptConnection(ipList.getIPList())
 
-while SERVER_IP is None:
-    i = input('server could not be found. Enter ip: ')
-    SERVER_IP = attemptConnection([i], False)
-addToIPList(SERVER_IP)
+if SERVER_IP is None:
+    while SERVER_IP is None:
+        i = input('server could not be found. Enter ip: ')
+        SERVER_IP = attemptConnection([i], False)
+    ipList.addToIPList(SERVER_IP)
 
 name = input('enter name: ')
 clientSocket.settimeout(0.1)

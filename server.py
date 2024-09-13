@@ -57,9 +57,10 @@ def newGame():
             'FOODCOUNT': FOODCOUNT,
         },
         'state': 'waiting',
-        'public': False,
+        'public': True,
         'food': [],
-        'board': []
+        'board': [],
+        'name': 'test name'
     }
     return gameID
 
@@ -245,7 +246,7 @@ while True:
             del clients[clientID]
 
         elif data['type'] == 'ping':
-            serverSocket.sendto(json.dumps({'type': 'ping', 'data': {}}).encode(), addr)
+            serverSocket.sendto(json.dumps({'type': 'ping', 'data': {'blank':'blank'}}).encode(), addr)
             ct.printStatus(f"Ping from IP {addr[0]}")
 
         elif data['type'] == 'createGame':
@@ -256,6 +257,22 @@ while True:
 
             sendToClient(clientID, {'type': 'createGame', 'data': {'id': gameID, 'code': games[gameID]['code']}})
             ct.printStatus(f"Game created: {gameID} with host {clientID} / {clients[clientID].name}")
+
+        elif data['type'] == 'getGames':
+            gameList = []
+            for i in games:
+                game = games[i]
+                if game['state'] == 'waiting' and game['public']:
+                    gameList.append({
+                        'id': game['id'],
+                        'code': game['code'],
+                        'numPlayers': len(game['players']),
+                        'hostName': clients[game['players'][0]].name,
+                        'name': game['name']
+                    })
+            gameList = sorted(gameList, key=lambda x: x['players'], reverse=True)
+            
+            sendToClient(data['data']['id'], {'type': 'getGames', 'data': {'games': gameList}})
 
         elif data['type'] == 'joinGame':
             gameCode = data['data']['code']
@@ -317,7 +334,7 @@ while True:
         elif type(e) == KeyError:
             print("Invalid data received", e)
         else:
-            print("Invalid data received", e)
+            print("Error", e)
             continue
     
     

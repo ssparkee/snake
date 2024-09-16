@@ -173,6 +173,12 @@ while gameStart == 0:
         print(e)
 
 testThread.join(timeout=0.1)
+if len(snakeInfo) == 0:
+    clientSocket.sendto(json.dumps({'type': 'disconnect', 'data': {
+                        'id': clientID}}).encode(), (SERVER_IP, 65432))
+    clientSocket.close()
+    socketThread.join(timeout=0.1)
+    quit()
 snakeGame = snake.snakeGame((800, 600), 40, snakeInfo)
 clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {'id': clientID, 'snake': snakeGame.snake}}).encode(), (SERVER_IP, 65432))
 sleep(0.1)

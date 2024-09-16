@@ -44,6 +44,7 @@ def getClientsInGame(gameID):
     return [client for client in clients.values() if client.gameID == gameID]
 
 def newGame():
+    global games
     gameCode = str(randint(1000, 9999))
     gameID = str(uuid4())
     games[gameID] = {
@@ -260,8 +261,9 @@ while True:
 
         elif data['type'] == 'getGames':
             gameList = []
-            for i in games:
-                game = games[i]
+            print(games)
+            for game in games.values():
+                print(game)
                 if game['state'] == 'waiting' and game['public']:
                     gameList.append({
                         'id': game['id'],
@@ -270,7 +272,7 @@ while True:
                         'hostName': clients[game['players'][0]].name,
                         'name': game['name']
                     })
-            gameList = sorted(gameList, key=lambda x: x['players'], reverse=True)
+            gameList = sorted(gameList, key=lambda x: x['numPlayers'], reverse=True)
             
             sendToClient(data['data']['id'], {'type': 'getGames', 'data': {'games': gameList}})
 

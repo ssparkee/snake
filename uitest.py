@@ -22,18 +22,13 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("UI Test")
 
 connectionFont = pygame.font.Font(None, 36)
-text = connectionFont.render('Connecting to server...', True, WHITE)
-text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 6-30))
+snakeText = connectionFont.render('Connecting to server...', True, WHITE)
+text_rect = snakeText.get_rect(center=(WIDTH // 2, HEIGHT // 6-30))
 
 active = False
 gameID, snakeInfo, gameEnvironment, clientID, gamesList = None, None, None, None, None
 gameHost = False
 gameStart = 0
-
-cfWindow = sd.submitDialog(WIDTH, HEIGHT, screen, "Could not automatically connect to the server", "Enter server IP:")
-nameWindow = sd.submitDialog(WIDTH, HEIGHT, screen, "Welcome to Adam's Snake!", "Enter your name:")
-lobbiesWindow = ll.lobbiesList(WIDTH, HEIGHT, screen, [])
-activeWindow = nameWindow
 
 clock = pygame.time.Clock()
 windowIndex = 0
@@ -42,14 +37,21 @@ startLoadTime = time.time()
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 clientSocket.settimeout(0.1)
 
+def quitProgram():
+    pygame.quit()
+    socketThread.join(timeout=0.1)
+    if clientID is not None:
+        clientSocket.sendto(json.dumps({'type': 'disconnect', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
+        clientSocket.close()
+
 def fakeGamesList():
     gamesList = []
-    for i in range(randint(1, 5)):
-        gamesList.append({'id': 'ak1jk1fjkl1j1908-fjajl', 'id':randint(1000, 9999), 'hostName': 'Adam', 'name': f'Lobby {i}', 'numPlayers': randint(1, 4)})
+    for i in range(randint(1, 10)):
+        gamesList.append({'id': 'ak1jk1fjkl1j1908-fjajl', 'id':'a' + str(randint(1000, 9999)), 'hostName': 'Adam', 'name': f'Lobby {i}', 'numPlayers': randint(1, 4)})
     return gamesList
 
 def socketListener():
-    global gameID, clientID, gameHost, snakeInfo, gameStart, gameEnvironment, gamesList
+    global gameID, clientID, gameHost, snakeInfo, gameStart, gameEnvironment, gamesList, windowIndex
     while True:
         try:
             data, addr = clientSocket.recvfrom(4096)
@@ -79,6 +81,7 @@ def socketListener():
                 ct.printStatus(f"Game joined: {data['data']['id']}")
                 gameID = data['data']['id']
                 gameHost = False
+                windowIndex = 5
             elif data['type'] == 'getGames':
                 ct.printStatus(f"Games: {data['data']['games']}")
                 gamesList = data['data']['games']
@@ -151,6 +154,27 @@ def attemptConnection(ip, testLocal=True):
             print(type(e))
             return None
 
+def refreshLobbies():
+    ct.printStatus("Refreshing lobbies")
+    clientSocket.sendto(json.dumps({'type': 'getGames', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
+
+def createLobby():
+    ct.printStatus("Creating lobby")
+
+def joinPrivate():
+    ct.printStatus("Joining private lobby")
+
+def joinLobby(lobbyCode):
+    ct.printStatus(f"Joining lobby {lobbyCode}")
+    if lobbyCode[0] == 'a':
+        return
+    clientSocket.sendto(json.dumps({'type': 'joinGame', 'data': {'id': clientID, 'code': lobbyCode}}).encode(), (SERVER_IP, 65432))
+
+cfWindow = sd.submitDialog(WIDTH, HEIGHT, screen, "Could not automatically connect to the server", "Enter server IP:")
+nameWindow = sd.submitDialog(WIDTH, HEIGHT, screen, "Welcome to Adam's Snake!", "Enter your name:")
+
+lobbiesWindow = ll.lobbiesList(WIDTH, HEIGHT, screen, [], refreshLobbies, createLobby, joinPrivate, joinLobby)
+activeWindow = nameWindow
 
 socketThread = threading.Thread(target=socketListener, daemon=True)
 #socketThread.start()
@@ -163,8 +187,7 @@ while True:
     frameNum += 1
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            pygame.quit()
-            quit()
+            quitProgram()
         elif event.type == KEYDOWN:
             if event.key == K_RETURN:
                 print(activeWindow.input_text)
@@ -198,8 +221,9 @@ while True:
         activeWindow = nameWindow
         nameWindow.setHighlights(pygame.mouse.get_pos())
         nameWindow.displayWindow()
+
     elif windowIndex == 1:
-        screen.blit(text, text_rect)
+        screen.blit(snakeText, text_rect)
         ls.drawLoadingSnake(clock, screen, moveSegments=(frameNum % 3 == 0)) #make it so the snake gets bigger!!
         if connectionAttemptState == 0:
             if len(ips) == 1:
@@ -217,9 +241,10 @@ while True:
             socketThread.start()
             clientSocket.sendto(json.dumps({'type': 'connect', 'data': {'name': name}}).encode(), (SERVER_IP, 65432))
             startLoadTime = time.time()
-            text = connectionFont.render('Getting active lobbies...', True, WHITE)
+            snakeText = connectionFont.render('Getting active lobbies...', True, WHITE)
             getGamesSent = False
             windowIndex = 3
+
     elif windowIndex == 2:
         activeWindow = cfWindow
         cfWindow.setHighlights(pygame.mouse.get_pos())
@@ -228,8 +253,9 @@ while True:
             ips = [str(ip)]
             startLoadTime = time.time()
             windowIndex = 1
-    if windowIndex == 3:
-        screen.blit(text, text_rect)
+
+    elif windowIndex == 3:
+        screen.blit(snakeText, text_rect)
         ls.drawLoadingSnake(clock, screen, moveSegments=(frameNum % 3 == 0))
         if clientID is not None and gamesList is None and time.time() - startLoadTime > 1 and not getGamesSent:
             getGamesSent = True
@@ -238,14 +264,17 @@ while True:
             lobbiesWindow.lobbies = gamesList
             windowIndex = 4
 
-    if windowIndex == 4:
+    elif windowIndex == 4:
         activeWindow = lobbiesWindow
+        lobbiesWindow.lobbies = gamesList
         lobbiesWindow.displayWindow()
-        lobbiesWindow.setHighlights(pygame.mouse.get_pos())        
+        lobbiesWindow.setHighlights(pygame.mouse.get_pos())
+
+    elif windowIndex == 5:
+        snakeText = connectionFont.render('Waiting for host to start...', True, WHITE)
+        screen.blit(snakeText, text_rect)
+        ls.drawLoadingSnake(clock, screen, moveSegments=(frameNum % 3 == 0))
 
     pygame.display.flip()
 
     clock.tick(15)
-
-pygame.quit()
-socketThread.join(timeout=0.1)

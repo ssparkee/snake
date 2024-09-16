@@ -46,7 +46,10 @@ current_segment = 0
 def drawLoadingSnake(clock, screen, moveSegments=True):
     global current_segment
 
-    apple_position = (current_segment + 2) % num_segments
+    if moveSegments:
+        apple_position = (current_segment + 2) % num_segments
+    else:
+        apple_position = (current_segment + 1) % num_segments
 
     for i, pos in enumerate(circle_positions):
         pygame.draw.circle(screen, GREY, pos, 10)

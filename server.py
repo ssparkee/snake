@@ -183,12 +183,14 @@ def gameThread(gameID):
             'data': {'id': gameID, 'start':'for real this time'}
         })
     while games[gameID]['state'] == 'running':
+        gameClients = getClientsInGame(gameID)
         for client in gameClients:
             try:
                 if int(time()) - int(clients[client.id].lastMessageTimestamp) > TIMEOUT:
                     ct.printWarning(f"Client {client.id} timed out!")
-                    games[gameID]['players'].remove(client.id)
-                    del clients[client.id]
+                    if client.id in games[gameID]['players']:
+                        games[gameID]['players'].remove(client.id)
+                        del clients[client.id]
                 else:
                     checkFood(client.snake['head'][0], client.snake['head'][1], gameID)
                     sendToClient(client.id, {
@@ -288,6 +290,13 @@ while True:
 
             sendToClient(clientID, {'type': 'joinGame', 'data': {'id': gameID}})
             ct.printStatus(f"Game joined: {gameID} with player {clientID} / {clients[clientID].name}")
+
+        elif data['type'] == 'leaveGame':
+            gameID = data['data']['gameID']
+            clientID = data['data']['id']
+            games[gameID]['players'].remove(clientID)
+            clients[clientID].gameID = None
+            ct.printStatus(f"Player {clientID} / {clients[clientID].name} left game {gameID}")
 
         elif data['type'] == 'gameStatus':
             clientID = data['data']['id']

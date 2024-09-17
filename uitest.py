@@ -3,6 +3,7 @@ import modules.submitDialog as sd
 import modules.colouredText as ct
 import modules.lobbiesList as ll
 import modules.ipList as ipList
+import modules.snake as snake
 import pygame
 from pygame.locals import *
 import socket
@@ -10,6 +11,7 @@ import json
 import time
 import threading
 from random import randint
+from time import sleep
 
 pygame.init()
 
@@ -96,6 +98,7 @@ def socketListener():
                     ct.printStatus(f"Game starting soon: {data['data']['id']}")
                     snakeInfo = data['data']['snakeInfo']
                     gameStart = 1
+                    windowIndex = 6
             elif data['type'] == 'startGame':
                 ct.printStatus(f"Game started: {data['data']['id']}")
                 gameStart = 2
@@ -170,11 +173,25 @@ def joinLobby(lobbyCode):
         return
     clientSocket.sendto(json.dumps({'type': 'joinGame', 'data': {'id': clientID, 'code': lobbyCode}}).encode(), (SERVER_IP, 65432))
 
+def returnToLobbyList():
+    global snakeText, windowIndex, gamesList, startLoadTime, getGamesSent, clientSnake, screen
+    snakeText = connectionFont.render('Getting active lobbies...', True, WHITE)
+    gamesList = None
+    startLoadTime = time.time()
+    getGamesSent = False
+    clientSnake = None
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    windowIndex = 3
+
 cfWindow = sd.submitDialog(WIDTH, HEIGHT, screen, "Could not automatically connect to the server", "Enter server IP:")
 nameWindow = sd.submitDialog(WIDTH, HEIGHT, screen, "Welcome to Adam's Snake!", "Enter your name:")
 
 lobbiesWindow = ll.lobbiesList(WIDTH, HEIGHT, screen, [], refreshLobbies, createLobby, joinPrivate, joinLobby)
+
+textBoxWindows = [cfWindow, nameWindow]
+
 activeWindow = nameWindow
+
 
 socketThread = threading.Thread(target=socketListener, daemon=True)
 #socketThread.start()
@@ -189,19 +206,20 @@ while True:
         if event.type == pygame.QUIT:
             quitProgram()
         elif event.type == KEYDOWN:
-            if event.key == K_RETURN:
-                print(activeWindow.input_text)
-                ip = activeWindow.input_text
-                activeWindow.input_text = ''
-            elif event.key == K_BACKSPACE:
-                activeWindow.input_text = activeWindow.input_text[:-1]
-            else:
-                activeWindow.input_text += event.unicode
+            if activeWindow in textBoxWindows:
+                if event.key == K_RETURN:
+                    print(activeWindow.input_text)
+                    ip = activeWindow.input_text
+                    activeWindow.input_text = ''
+                elif event.key == K_BACKSPACE:
+                    activeWindow.input_text = activeWindow.input_text[:-1]
+                else:
+                    activeWindow.input_text += event.unicode
         elif event.type == MOUSEBUTTONDOWN:
             if activeWindow == lobbiesWindow:
                 lobbiesWindow.handleMouseClick(pygame.mouse.get_pos())
 
-            elif activeWindow == cfWindow or activeWindow == nameWindow:
+            elif activeWindow in textBoxWindows:
                 if activeWindow.input_box.collidepoint(event.pos):
                     activeWindow.inputActive = not activeWindow.inputActive
                 else:
@@ -275,6 +293,61 @@ while True:
         screen.blit(snakeText, text_rect)
         ls.drawLoadingSnake(clock, screen, moveSegments=(frameNum % 3 == 0))
 
+    elif windowIndex == 6:
+        if len(snakeInfo) == 0:
+            socketThread.join(timeout=0.1)
+            clientSocket.sendto(json.dumps({'type': 'disconnect', 'data': {
+                                'id': clientID}}).encode(), (SERVER_IP, 65432))
+            clientSocket.close()
+            quit()
+
+        screen = pygame.display.set_mode((800, 600))
+        snakeGame = snake.snakeGame(screen, (800, 600), 40, snakeInfo)
+        clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {
+                            'id': clientID, 'snake': snakeGame.snake}}).encode(), (SERVER_IP, 65432))
+        
+        sleep(0.1)
+
+        while gameStart == 1:
+            try:
+                snakeGame.updateEnvironment(gameEnvironment)
+                snakeGame.getMoveQueue()
+                snakeGame.moveQueue = []
+                snakeGame.playFrame()
+                sleep(0.15)
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                print(e)
+
+        snakeGame.startGame()
+
+        while snakeGame.running:
+            try:
+                snakeGame.processSnakeChange()
+                if not snakeGame.running:
+                    print("Game over")
+                    break
+                clientSnake = snakeGame.snake
+
+                clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {
+                                    'id': clientID, 'snake': clientSnake}}).encode(), (SERVER_IP, 65432))
+
+                snakeGame.updateEnvironment(gameEnvironment)
+
+                snakeGame.playFrame()
+                sleep(0.15)
+            except KeyboardInterrupt:
+                break
+
+        clientSocket.sendto(json.dumps({'type': 'leaveGame', 'data': {'id': clientID, 'gameID':gameID}}).encode(), (SERVER_IP, 65432))
+        returnToLobbyList()
+
     pygame.display.flip()
 
     clock.tick(15)
+
+socketThread.join(timeout=0.1)
+clientSocket.sendto(json.dumps({'type': 'disconnect', 'data': {
+                    'id': clientID}}).encode(), (SERVER_IP, 65432))
+clientSocket.close()

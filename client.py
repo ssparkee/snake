@@ -1,6 +1,7 @@
 import socket
 import json
 import threading
+import pygame
 from time import sleep
 import modules.colouredText as ct
 import modules.snake as snake
@@ -179,7 +180,9 @@ if len(snakeInfo) == 0:
     clientSocket.close()
     socketThread.join(timeout=0.1)
     quit()
-snakeGame = snake.snakeGame((800, 600), 40, snakeInfo)
+pygame.init()
+snakeScreen = pygame.display.set_mode((800, 600))
+snakeGame = snake.snakeGame(snakeScreen, (800, 600), 40, snakeInfo)
 clientSocket.sendto(json.dumps({'type': 'clientUpdate', 'data': {'id': clientID, 'snake': snakeGame.snake}}).encode(), (SERVER_IP, 65432))
 sleep(0.1)
 while gameStart == 1:

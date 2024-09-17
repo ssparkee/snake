@@ -48,7 +48,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
 class snakeGame:
-    def __init__(self, gridPX, blockSize, snakeInfo):
+    def __init__(self, screen, gridPX, blockSize, snakeInfo):
         self.GRIDWIDTHPX = gridPX[0]
         self.GRIDHEIGHTPX = gridPX[1]
         self.BLOCKSIZE = blockSize
@@ -62,8 +62,9 @@ class snakeGame:
         self.environment = []
         self.running = False
         self.moveQueue = []
-        pygame.init()
-        self.screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+        #pygame.init()
+        #self.screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+        self.screen = screen
         pygame.display.set_caption('Snake')
         self.clock = pygame.time.Clock()
         sleep(0.1)

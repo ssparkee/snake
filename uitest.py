@@ -174,12 +174,13 @@ def joinLobby(lobbyCode):
     clientSocket.sendto(json.dumps({'type': 'joinGame', 'data': {'id': clientID, 'code': lobbyCode}}).encode(), (SERVER_IP, 65432))
 
 def returnToLobbyList():
-    global snakeText, windowIndex, gamesList, startLoadTime, getGamesSent, clientSnake, screen
+    global snakeText, windowIndex, gamesList, startLoadTime, getGamesSent, clientSnake, screen, gameEnvironment
     snakeText = connectionFont.render('Getting active lobbies...', True, WHITE)
     gamesList = None
     startLoadTime = time.time()
     getGamesSent = False
     clientSnake = None
+    gameEnvironment = []
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     windowIndex = 3
 

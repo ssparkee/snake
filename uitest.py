@@ -21,7 +21,7 @@ WIDTH, HEIGHT = 600, 600
 SERVER_IP = None
 ls.init(WIDTH, HEIGHT)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("UI Test")
+pygame.display.set_caption("Adam's Snake")
 
 connectionFont = pygame.font.Font(None, 36)
 snakeText = connectionFont.render('Connecting to server...', True, WHITE)

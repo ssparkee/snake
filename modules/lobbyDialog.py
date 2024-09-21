@@ -9,12 +9,14 @@ class LobbyDialog:
     BLUE = (0, 0, 255)
     HIGHLIGHT_COLOR = (127, 255, 212)
 
-    def __init__(self, width, height, game_modes, marginLeft=25):
+    def __init__(self, width, height, game_modes, submitFunction, marginLeft=25):
+        self.submitFunction = submitFunction
         pygame.init()
         self.screen = pygame.display.set_mode((width, height))
+        pygame.display.set_caption("Create Lobby")
         self.WIDTH = width
         self.HEIGHT = height
-        self.marginLeft = marginLeft  # Distance from the left edge
+        self.marginLeft = marginLeft
         self.font = pygame.font.Font(None, 36)
         self.label_font = pygame.font.Font(None, 28)
 
@@ -23,12 +25,12 @@ class LobbyDialog:
         self.title_text = self.title_font.render("Create a Lobby", True, self.WHITE)
 
         # Lobby name input box
-        self.input_box = pygame.Rect(self.marginLeft, 110, 200, 36)
+        self.input_box = pygame.Rect(self.marginLeft, 110, 250, 36)
         self.lobby_name = ''
         self.is_public = True
 
         # Game mode dropdown
-        self.drop_down_rect = pygame.Rect(self.marginLeft, 200, 200, 36)
+        self.drop_down_rect = pygame.Rect(self.marginLeft, 200, 250, 36)
         self.selected_game_mode = game_modes[0]
         self.game_modes = game_modes
         self.drop_down_open = False
@@ -36,7 +38,7 @@ class LobbyDialog:
         # Visibility button
         self.toggle_rect = pygame.Rect(self.marginLeft, 290, 100, 36)
 
-        # Submit button positioned 20 pixels from the bottom of the dialog
+        # Submit button
         self.submit_font = pygame.font.Font(None, 38)
         self.submit_button_rect = pygame.Rect(self.WIDTH // 2 - 150//2, self.HEIGHT - 60, 150, 40)
 
@@ -45,9 +47,9 @@ class LobbyDialog:
         self.inputActive = False
         self.hovering_input = False
         self.hovering_dropdown = False
-        self.hovering_dropdown_option = None  # Track the hovered option in the dropdown
-        self.hovering_toggle = False  # Track the hovered state of the toggle button
-        self.hovering_submit = False  # Track the hovered state of the submit button
+        self.hovering_dropdown_option = None
+        self.hovering_toggle = False  
+        self.hovering_submit = False  
 
     def draw_label(self, text, position, font=None):
         """Helper function to draw labels above each input box."""
@@ -57,14 +59,13 @@ class LobbyDialog:
         self.screen.blit(label_surface, position)
 
     def draw_input_box(self):
-        # Label for the input box
         self.draw_label("Lobby Name", (self.input_box.x, self.input_box.y - 30))
 
         # Highlight the input box if hovered
         pygame.draw.rect(self.screen, self.HIGHLIGHT_COLOR if self.hovering_input else self.WHITE, self.input_box, 2)
         text_surface = self.font.render(self.lobby_name, True, self.WHITE)
         self.screen.blit(text_surface, (self.input_box.x + 5, self.input_box.y + 5))
-        self.input_box.w = max(200, text_surface.get_width() + 10)
+        self.input_box.w = max(self.input_box.width, text_surface.get_width() + 10)
 
         # Cursor blinking effect
         current_time = time()
@@ -78,17 +79,14 @@ class LobbyDialog:
             pygame.draw.line(self.screen, self.WHITE, (cursor_x, cursor_y), (cursor_x, cursor_y + 26), 2)
 
     def draw_toggle_button(self):
-        # Label for the toggle button (now "Visibility" is below "Mode")
         self.draw_label("Visibility", (self.toggle_rect.x, self.toggle_rect.y - 30))
 
         # Determine text color based on the visibility state
         label = "Public" if self.is_public else "Private"
-        text_color = (0, 255, 0) if self.is_public else (255, 0, 0)  # Green for Public, Red for Private
+        text_color = (0, 255, 0) if self.is_public else (255, 0, 0)
 
-        # Draw the toggle button (rectangle remains the same)
         pygame.draw.rect(self.screen, self.BLACK, self.toggle_rect)
 
-        # Draw the text with the appropriate color
         text_surface = self.font.render(label, True, text_color)
         self.screen.blit(text_surface, (self.toggle_rect.x + self.toggle_rect.width // 2 - text_surface.get_width() // 2, self.toggle_rect.y + 5))
 
@@ -102,16 +100,14 @@ class LobbyDialog:
         self.screen.blit(text_surface, (self.submit_button_rect.x + self.submit_button_rect.width // 2 - text_surface.get_width() // 2, self.submit_button_rect.y + 8))
 
     def draw_drop_down(self):
-        # Label for the dropdown (now "Mode" is above "Visibility")
+        # Label for the dropdown
         self.draw_label("Mode", (self.drop_down_rect.x, self.drop_down_rect.y - 30))
 
-        # Highlight the dropdown if hovered
         pygame.draw.rect(self.screen, self.HIGHLIGHT_COLOR if self.hovering_dropdown else self.WHITE, self.drop_down_rect, 2)
         mode_text = self.font.render(self.selected_game_mode, True, self.WHITE)
         self.screen.blit(mode_text, (self.drop_down_rect.x + 5, self.drop_down_rect.y + 5))
 
         if self.drop_down_open:
-            # Draw background for the dropdown
             dropdown_height = len(self.game_modes) * 40
             pygame.draw.rect(self.screen, self.BLACK, (self.drop_down_rect.x, self.drop_down_rect.y + 36, self.drop_down_rect.w, dropdown_height))
 
@@ -128,19 +124,15 @@ class LobbyDialog:
                 self.screen.blit(option_text, (option_rect.x + 5, option_rect.y + 5))
 
     def setHighlights(self, mouse_pos):
-        # Check if mouse is hovering over the input box
+        # Check mouse hover
         self.hovering_input = self.input_box.collidepoint(mouse_pos)
 
-        # Check if mouse is hovering over the dropdown box
         self.hovering_dropdown = self.drop_down_rect.collidepoint(mouse_pos)
 
-        # Check if mouse is hovering over the toggle button
         self.hovering_toggle = self.toggle_rect.collidepoint(mouse_pos)
 
-        # Check if mouse is hovering over the submit button
         self.hovering_submit = self.submit_button_rect.collidepoint(mouse_pos)
 
-        # Check if mouse is hovering over any dropdown option when open
         if self.drop_down_open:
             self.hovering_dropdown_option = None
             for i in range(len(self.game_modes)):
@@ -172,6 +164,11 @@ class LobbyDialog:
             # Handle submit button click
             if self.submit_button_rect.collidepoint(event.pos):
                 print(f"Lobby Name: {self.lobby_name}, Public: {self.is_public}, Game Mode: {self.selected_game_mode}")
+                self.submitFunction({
+                    'lobby':self.lobby_name,
+                    'public':self.is_public,
+                    'mode':self.selected_game_mode
+                })
 
         if event.type == pygame.KEYDOWN:
             if self.inputActive:
@@ -203,8 +200,9 @@ class LobbyDialog:
             pygame.display.flip()
             clock.tick(30)
 
+def test(args):
+    print(args)
 
-# Example usage:
 game_modes = ["Deathmatch", "Capture the Flag", "King of the Hill"]
-dialog = LobbyDialog(300, 500, game_modes, marginLeft=25)  # Set margin to adjust the distance from the left
+dialog = LobbyDialog(300, 500, game_modes, test, marginLeft=25)
 dialog.run_dialog()

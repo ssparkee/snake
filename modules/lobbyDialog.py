@@ -9,9 +9,8 @@ class LobbyDialog:
     BLUE = (0, 0, 255)
     HIGHLIGHT_COLOR = (127, 255, 212)
 
-    def __init__(self, width, height, game_modes, submitFunction, marginLeft=25):
+    def __init__(self, game_modes, submitFunction, marginLeft=25, width=300, height=500):
         self.submitFunction = submitFunction
-        pygame.init()
         self.screen = pygame.display.set_mode((width, height))
         pygame.display.set_caption("Create Lobby")
         self.WIDTH = width
@@ -164,6 +163,7 @@ class LobbyDialog:
             # Handle submit button click
             if self.submit_button_rect.collidepoint(event.pos):
                 print(f"Lobby Name: {self.lobby_name}, Public: {self.is_public}, Game Mode: {self.selected_game_mode}")
+                self.running = False
                 self.submitFunction({
                     'lobby':self.lobby_name,
                     'public':self.is_public,
@@ -181,12 +181,12 @@ class LobbyDialog:
 
     def run_dialog(self):
         clock = pygame.time.Clock()
-        running = True
-        while running:
+        self.running = True
+        while self.running:
             self.screen.fill(self.BLACK)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
+                    self.running = False
                 self.handle_events(event)
 
             self.screen.blit(self.title_text, (self.WIDTH // 2 - self.title_text.get_width() // 2, 20))
@@ -203,6 +203,7 @@ class LobbyDialog:
 def test(args):
     print(args)
 
-game_modes = ["Deathmatch", "Capture the Flag", "King of the Hill"]
-dialog = LobbyDialog(300, 500, game_modes, test, marginLeft=25)
-dialog.run_dialog()
+if __name__ == "__main__":
+    game_modes = ["Deathmatch", "Capture the Flag", "King of the Hill"]
+    dialog = LobbyDialog(300, 500, game_modes, test, marginLeft=25)
+    dialog.run_dialog()

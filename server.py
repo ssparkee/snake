@@ -43,7 +43,7 @@ def getLocalIP():
 def getClientsInGame(gameID):
     return [client for client in clients.values() if client.gameID == gameID]
 
-def newGame():
+def newGame(public=True, name='test name'):
     global games
     gameCode = str(randint(1000, 9999))
     gameID = str(uuid4())
@@ -58,10 +58,10 @@ def newGame():
             'FOODCOUNT': FOODCOUNT,
         },
         'state': 'waiting',
-        'public': True,
+        'public': public,
         'food': [],
         'board': [],
-        'name': 'test name'
+        'name': name
     }
     return gameID
 
@@ -204,7 +204,7 @@ def gameThread(gameID):
             except RuntimeError:
                 continue
         if len(getClientsInGame(gameID)) == 0:
-            ct.printStatus(f"Game {games[gameID]['code']} has no players, ending game")
+            ct.printWarning(f"Game {games[gameID]['code']} has no players, ending game")
             games[gameID]['state'] = 'over'
             return
 
@@ -246,6 +246,8 @@ while True:
             for gameID in games:
                 if clientID in games[gameID]['players']:
                     games[gameID]['players'].remove(clientID)
+                    if len(games[gameID]['players']) == 0 and games[gameID]['state'] == 'waiting':
+                        del games[gameID]
             del clients[clientID]
 
         elif data['type'] == 'ping':
@@ -253,7 +255,7 @@ while True:
             ct.printStatus(f"Ping from IP {addr[0]}")
 
         elif data['type'] == 'createGame':
-            gameID = newGame()
+            gameID = newGame(data['data']['public'], data['data']['name'])
             clientID = data['data']['id']
             clients[clientID].connectToGame(gameID)
             games[gameID]['players'].append(clientID)

@@ -2,6 +2,7 @@ import modules.loadingSnake as ls
 import modules.submitDialog as sd
 import modules.colouredText as ct
 import modules.lobbiesList as ll
+import modules.lobbyDialog as ld
 import modules.ipList as ipList
 import modules.snake as snake
 import pygame
@@ -79,11 +80,12 @@ def socketListener():
                 ct.printStatus(f"Game created: {data['data']['code']}")
                 gameID = data['data']['id']
                 gameHost = True
+                windowIndex = 6
             elif data['type'] == 'joinGame':
                 ct.printStatus(f"Game joined: {data['data']['id']}")
                 gameID = data['data']['id']
                 gameHost = False
-                windowIndex = 5
+                windowIndex = 7
             elif data['type'] == 'getGames':
                 ct.printStatus(f"Games: {data['data']['games']}")
                 gamesList = data['data']['games']
@@ -98,7 +100,7 @@ def socketListener():
                     ct.printStatus(f"Game starting soon: {data['data']['id']}")
                     snakeInfo = data['data']['snakeInfo']
                     gameStart = 1
-                    windowIndex = 6
+                    windowIndex = 10
             elif data['type'] == 'startGame':
                 ct.printStatus(f"Game started: {data['data']['id']}")
                 gameStart = 2
@@ -161,8 +163,16 @@ def refreshLobbies():
     ct.printStatus("Refreshing lobbies")
     clientSocket.sendto(json.dumps({'type': 'getGames', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
 
+def createLobbySubmit(lobbyInfo):
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    print(lobbyInfo)
+    clientSocket.sendto(json.dumps({'type': 'createGame', 'data': {'id': clientID, 'name': lobbyInfo['lobby'], 'public': lobbyInfo['public'], 'mode': lobbyInfo['mode']}}).encode(), (SERVER_IP, 65432))
+
 def createLobby():
     ct.printStatus("Creating lobby")
+    game_modes = ["Last Man Standing", "Time Trial"]
+    dialog = ld.LobbyDialog(game_modes, createLobbySubmit, marginLeft=25, width=300, height=500)
+    dialog.run_dialog()
 
 def joinPrivate():
     ct.printStatus("Joining private lobby")
@@ -275,6 +285,7 @@ while True:
 
     elif windowIndex == 3:
         screen.blit(snakeText, text_rect)
+        ls.init(WIDTH, HEIGHT)
         ls.drawLoadingSnake(clock, screen, moveSegments=(frameNum % 3 == 0))
         if clientID is not None and gamesList is None and time.time() - startLoadTime > 1 and not getGamesSent:
             getGamesSent = True
@@ -289,12 +300,19 @@ while True:
         lobbiesWindow.displayWindow()
         lobbiesWindow.setHighlights(pygame.mouse.get_pos())
 
-    elif windowIndex == 5:
-        snakeText = connectionFont.render('Waiting for host to start...', True, WHITE)
+    elif windowIndex == 6:
+        snakeText = connectionFont.render('Press start when ready!', True, WHITE)
         screen.blit(snakeText, text_rect)
+        ls.init(WIDTH, HEIGHT // 2, radius=30, circle_radius=5)
         ls.drawLoadingSnake(clock, screen, moveSegments=(frameNum % 3 == 0))
 
-    elif windowIndex == 6:
+    elif windowIndex == 7:
+        snakeText = connectionFont.render('Waiting for host to start...', True, WHITE)
+        screen.blit(snakeText, text_rect)
+        ls.init(WIDTH, HEIGHT)
+        ls.drawLoadingSnake(clock, screen, moveSegments=(frameNum % 3 == 0))
+
+    elif windowIndex == 10:
         if len(snakeInfo) == 0:
             socketThread.join(timeout=0.1)
             clientSocket.sendto(json.dumps({'type': 'disconnect', 'data': {

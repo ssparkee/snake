@@ -1,3 +1,6 @@
+"""
+Cool loading snake animation
+"""
 import pygame
 import math
 from modules.colours import *

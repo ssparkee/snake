@@ -2,7 +2,6 @@
 Writes text to the terminal with colour
 """
 
-
 def printWarning(*args):
     """Prints a message in yellow"""
     message = ""

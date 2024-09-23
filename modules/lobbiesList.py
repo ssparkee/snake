@@ -1,9 +1,15 @@
+"""
+This module contains the lobbiesList class which is used to display the list of lobbies available to join.
+"""
 import pygame
 from time import time
 from modules.colours import *
 
 
 class lobbiesList():
+    """
+    Class to display the list of lobbies available to join.
+    """
     def __init__(self, width, height, screen, lobbies, refreshLobbies, createLobby, joinPrivate, joinLobby):
         self.WIDTH = width
         self.HEIGHT = height
@@ -28,7 +34,7 @@ class lobbiesList():
 
     def getRectColour(self, rect):
         if rect == self.highlightRect:
-            return HIGHLIGHT_COLOR
+            return HIGHLIGHT_COLOUR
         else:
             return LGREY
 
@@ -37,14 +43,22 @@ class lobbiesList():
 
         self.lobbyRects.clear()
         self.updateLobbies()
-        for rect, lobby in self.lobbyRects:
-            #startY = (self.HEIGHT - (len(self.lobbies) * (self.containerHeight + self.containerMargin))) // 2
-            startY = self.startY
+
+        if len(self.lobbyRects) == 0:
             containerX = (self.WIDTH - self.containerWidth) // 2
-            containerY = startY + self.lobbyRects.index((rect, lobby)) * (self.containerHeight + self.containerMargin)
+            containerY = self.startY
+            rect = pygame.Rect(containerX, containerY, self.containerWidth, self.containerHeight)
+            pygame.draw.rect(self.screen, LGREY, rect)
+            font = pygame.font.Font(None, 42)
+            text = font.render("No lobbies available :(", True, BLACK)
+            self.screen.blit(text, (containerX + 10, containerY + 10))
+
+        for rect, lobby in self.lobbyRects:            
+            containerX = (self.WIDTH - self.containerWidth) // 2
+            containerY = self.startY + self.lobbyRects.index((rect, lobby)) * (self.containerHeight + self.containerMargin)
 
             if self.highlightRect == rect:
-                rectColour = HIGHLIGHT_COLOR
+                rectColour = HIGHLIGHT_COLOUR
             else:
                 rectColour = LGREY
             pygame.draw.rect(self.screen, rectColour, rect)

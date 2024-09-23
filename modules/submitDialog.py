@@ -4,10 +4,11 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
 class submitDialog():
-    def __init__(self, width, height, screen, firstline, secondline):
+    def __init__(self, width, height, screen, firstline, secondline, charLimit=12):
         self.WIDTH = width
         self.HEIGHT = height
         self.screen = screen
+        self.charLimit = charLimit
         self.input_box = pygame.Rect(self.WIDTH // 2 - 100, self.HEIGHT // 2, 200, 36)
         
         self.popup_font = pygame.font.Font(None, 28)

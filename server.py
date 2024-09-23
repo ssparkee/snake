@@ -3,12 +3,13 @@ from uuid import uuid4
 import json
 import pygame
 import modules.colouredText as ct
+from modules.ipList import getLocalIP
 from random import randint
 import threading
 from time import sleep, time
 
 
-class Client:
+class Client: #Class for client information
     def __init__(self, name, clientID, addr, gameID=None):
         self.id = clientID
         self.snake = {
@@ -27,23 +28,12 @@ class Client:
     def connectToGame(self, gameID):
         self.gameID = gameID
 
-
-def getLocalIP():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(("8.8.8.8", 80))
-        localIP = s.getsockname()[0]
-    except Exception as e:
-        localIP = "Unable to get local IP"
-    finally:
-        s.close()
-
-    return localIP
-
 def getClientsInGame(gameID):
+    """Returns a list of clients in a game"""
     return [client for client in clients.values() if client.gameID == gameID]
 
 def newGame(public=True, name='test name'):
+    """Creates a new game and returns the gameID"""
     global games
     gameCode = str(randint(1000, 9999))
     gameID = str(uuid4())
@@ -65,7 +55,200 @@ def newGame(public=True, name='test name'):
     }
     return gameID
 
+def sendToClient(clientID, data):
+    """Sends data to a the matching address of a client"""
+    serverSocket.sendto(json.dumps(data).encode(), clients[clientID].addr)
 
+def getPlayerSnake(gameID, clientID):
+    """Gets the snake of a player"""
+    return clients[clientID].snake
+
+def setPlayerSnake(gameID, clientID, snake):
+    """Sets the snake of a player"""
+    clients[clientID].snake = snake
+
+def setPlayerEnvironment(gameID, clientID, environment):
+    """Sets the environment of a player"""
+    clients[clientID].environment = environment
+
+def getPlayerEnvironment(clientID):
+    """Gets the environment of a player"""
+    return clients[clientID].environment
+
+def getFoodSpawn(gameID):
+    """Gets a random spawn location for food"""
+    BLOCKSIZE = games[gameID]['rules']['BLOCKSIZE']
+    GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
+    GRIDHEIGHT = games[gameID]['rules']['GRIDHEIGHTPX'] // BLOCKSIZE
+    foodPos = (randint(0, GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
+
+    while isOccupied(gameID, foodPos[0], foodPos[1], removeFood=False)[0]: #Get a new spawn location until it is not occupied
+        foodPos = (randint(0, GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
+
+    return foodPos
+
+def isOccupied(gameID, x, y, clientID='', removeFood=True):
+    """Checks if a position is occupied by a snake, wall, or food"""
+    BLOCKSIZE = games[gameID]['rules']['BLOCKSIZE']
+    GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
+    GRIDHEIGHT = games[gameID]['rules']['GRIDHEIGHTPX'] // BLOCKSIZE
+
+    for client in getClientsInGame(gameID): #Check if the position is occupied by a snake
+        if client.id != clientID:
+            for part in client.snake['body']: #Check for body parts
+                if part == [x, y]:
+                    return (True, 'body', client.id)
+            if tuple(client.snake['head']) == (x, y): #Check for the head
+                return (True, 'head', client.id)
+        else:
+            if int(client.snake['length']) > 3: 
+                #Check for the tail. If the tail is less than 3, it is not a collision, as at the start of the game the tail is spawned in the same place as the head
+                for part in client.snake['body']:
+                    if part == [x, y]:
+                        return (True, 'self', client.id)
+
+    if x < 0 or x >= GRIDWIDTH or y < 0 or y >= GRIDHEIGHT: #Check if the position is outside the grid
+        return (True, 'wall', None)
+
+    if (x, y) in games[gameID]['food']: #Check if the position is occupied by food
+        if removeFood:
+            games[gameID]['food'].remove((x, y)) #Remove the food and spawn a new one
+            games[gameID]['food'].append(getFoodSpawn(gameID))
+        return (True, 'food', None)
+
+    return (False, None, None) #No collision
+
+def checkFood(x, y, gameID):
+    """Checks if a snake has collided with food and spawns a new piece of food"""
+    if (x, y) in games[gameID]['food']:
+        games[gameID]['food'].remove((x, y))
+        games[gameID]['food'].append(getFoodSpawn(gameID))
+
+
+def getEnvironmentExclusive(gameID, clientID):
+    """Gets the environment of a player, excluding their own snake"""
+    environment = []
+    for client in getClientsInGame(gameID):
+        if client.id != clientID:  # If the client is not the player, add their snake to the environment
+            environment.append(
+                {'type': 'snake', 'snake': getPlayerSnake(gameID, client.id)})
+
+    for food in games[gameID]['food']:  # Add food to the environment
+        environment.append({'type': 'food', 'pos': food})
+
+    return environment
+
+def createSnakeSpawn(gameID):
+    """Creates a spawn location for a snake"""
+    BLOCKSIZE = games[gameID]['rules']['BLOCKSIZE']
+    GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
+    GRIDHEIGHT = games[gameID]['rules']['GRIDHEIGHTPX'] // BLOCKSIZE
+
+    """Code to spawn the snake in a random location.
+    This location is:
+    - Not occupied by another snake
+    - Does not have another snake's head within 1 block
+    - On either the left or right side of the grid
+    - On a random row, but not the top or bottom row
+    """
+    headPos = (randint(0, 1) * (GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
+    while isOccupied(gameID, headPos[0], headPos[1])[0] or isOccupied(gameID, headPos[0], headPos[1]+1)[0] or isOccupied(gameID, headPos[0], headPos[1]-1)[0]:
+        headPos = (randint(0, 1) * (GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
+
+    #Set the direction of the snake based on the spawn location
+    if headPos[0] == 0:
+        direction = (1, 0)
+    else:
+        direction = (-1, 0)
+    body = [headPos, headPos] #Set the two body parts of the snake in the same location as the head
+
+    return ({'length':3, 'head': headPos, 'body': body, 'direction': direction, 'last': (0, 0)}, direction[0])
+
+def gameThread(gameID):
+    """Thread for running a game. Each game instance runs in its own thread"""
+    
+    #Give the clients a chance to load the game, then send the environment
+    sleep(0.5)
+    gameClients = getClientsInGame(gameID)
+    for client in gameClients:
+        sendToClient(client.id, {
+            'type': 'updateEnvironment',
+            'data': {'environment': getEnvironmentExclusive(gameID, client.id)}
+        })
+    
+    #Start the game after 2 seconds
+    sleep(2)
+    gameClients = getClientsInGame(gameID)
+    for client in gameClients:
+        sendToClient(client.id, {
+            'type': 'startGame',
+            'data': {'id': gameID, 'start':'for real this time'}
+        })
+
+    #Game loop
+    while games[gameID]['state'] == 'running':
+        gameClients = getClientsInGame(gameID)
+        for client in gameClients:
+            try:
+                if int(time()) - int(clients[client.id].lastMessageTimestamp) > TIMEOUT:
+                    #Check if the client has timed out
+                    ct.printWarning(f"Client {client.id} timed out!")
+                    if client.id in games[gameID]['players']:
+                        games[gameID]['players'].remove(client.id)
+                        del clients[client.id]
+                else:
+                    #Check if the client has collided with food and update their environment. 
+                    #Most collision detection is done client-side.
+                    #The only collision done server-side is to find a new spawn location for food.
+                    #This is probably prone to exploitation however
+                    checkFood(client.snake['head'][0], client.snake['head'][1], gameID)
+                    sendToClient(client.id, {
+                        'type': 'updateEnvironment',
+                        'data': {
+                            'environment': getEnvironmentExclusive(gameID, client.id), 
+                        }
+                    })
+            except KeyError:
+                continue
+            except RuntimeError:
+                continue
+
+        if len(getClientsInGame(gameID)) == 0: #No players in the game, end the game and stop the thread
+            ct.printWarning(f"Game {games[gameID]['code']} has no players, ending game")
+            games[gameID]['state'] = 'over'
+            return
+
+def checkClientTimeout(clientID):
+    """Check if a client has timed out and remove them from their game and the client list"""
+    if int(time()) - int(clients[clientID].lastMessageTimestamp) > TIMEOUT + 1:
+        ct.printWarning(f"Client {clientID} timed out!")
+        i = 0
+        while True:
+            if i >= len(games):
+                break
+            gameID = list(games.keys())[i]
+            if clientID in games[gameID]['players']:
+                games[gameID]['players'].remove(clientID)
+                if len(games[gameID]['players']) == 0 and games[gameID]['state'] == 'waiting':
+                    del games[gameID]
+                    i -= 1
+            i += 1
+        del clients[clientID]
+        return True
+    return False
+
+def getLobbyList(gameID, clientID=None):
+    """Get a list of players in a game to display to the host"""
+    temp = []
+    for i in games[gameID]['players']:
+        if i == clientID:
+            temp.append({'name': f"{clients[i].name} (you)", 'id': i})
+        else:
+            temp.append({'name': clients[i].name, 'id': i})
+    print(temp)
+    return temp
+
+"""Initialise variables"""
 clients = {}
 games = {}
 gameThreads = []
@@ -80,149 +263,27 @@ SERVER_IP = getLocalIP()
 MINPLAYERS = 1
 TIMEOUT = 8
 
+"""Start the server"""
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 serverSocket.bind((SERVER_IP, 65432))
 serverSocket.settimeout(0.1)
 
-ct.printStatus(f"UDP Server is listening, IP: {SERVER_IP}")
-
-def sendToClient(clientID, data):
-    serverSocket.sendto(json.dumps(data).encode(), clients[clientID].addr)
-
-def getPlayerSnake(gameID, clientID):
-    return clients[clientID].snake
-
-def setPlayerSnake(gameID, clientID, snake):
-    clients[clientID].snake = snake
-
-def setPlayerEnvironment(gameID, clientID, environment):
-    clients[clientID].environment = environment
-
-def getPlayerEnvironment(clientID):
-    return clients[clientID].environment
-
-def getFoodSpawn(gameID):
-    BLOCKSIZE = games[gameID]['rules']['BLOCKSIZE']
-    GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
-    GRIDHEIGHT = games[gameID]['rules']['GRIDHEIGHTPX'] // BLOCKSIZE
-    foodPos = (randint(0, GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
-    while isOccupied(gameID, foodPos[0], foodPos[1], removeFood=False)[0]:
-        foodPos = (randint(0, GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
-    print('food:', foodPos)
-    return foodPos
-
-def getEnvironmentExclusive(gameID, clientID):
-    environment = []
-    for client in getClientsInGame(gameID):
-        if client.id != clientID:
-            environment.append({'type':'snake', 'snake':getPlayerSnake(gameID, client.id)})
-    for food in games[gameID]['food']:
-        environment.append({'type': 'food', 'pos': food})
-    return environment
-
-def isOccupied(gameID, x, y, clientID='', removeFood=True):
-    BLOCKSIZE = games[gameID]['rules']['BLOCKSIZE']
-    GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
-    GRIDHEIGHT = games[gameID]['rules']['GRIDHEIGHTPX'] // BLOCKSIZE
-
-    for client in getClientsInGame(gameID):
-        if client.id != clientID:
-            for part in client.snake['body']:
-                if part == [x, y]:
-                    return (True, 'body', client.id)
-            if tuple(client.snake['head']) == (x, y):
-                return (True, 'head', client.id)
-        else:
-            if int(client.snake['length']) > 3:
-                for part in client.snake['body']:
-                    if part == [x, y]:
-                        return (True, 'self', client.id)
-    if x < 0 or x >= GRIDWIDTH or y < 0 or y >= GRIDHEIGHT:
-        return (True, 'wall', None)
-    if (x, y) in games[gameID]['food']:
-        if removeFood:
-            games[gameID]['food'].remove((x, y))
-            games[gameID]['food'].append(getFoodSpawn(gameID))
-        return (True, 'food', None)
-    return (False, None, None)
-
-def checkFood(x, y, gameID):
-    if (x, y) in games[gameID]['food']:
-        games[gameID]['food'].remove((x, y))
-        games[gameID]['food'].append(getFoodSpawn(gameID))
-
-def createSnakeSpawn(gameID):
-    BLOCKSIZE = games[gameID]['rules']['BLOCKSIZE']
-    GRIDWIDTH = games[gameID]['rules']['GRIDWIDTHPX'] // BLOCKSIZE
-    GRIDHEIGHT = games[gameID]['rules']['GRIDHEIGHTPX'] // BLOCKSIZE
-
-    headPos = (randint(0, 1) * (GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
-    while isOccupied(gameID, headPos[0], headPos[1])[0] or isOccupied(gameID, headPos[0], headPos[1]+1)[0] or isOccupied(gameID, headPos[0], headPos[1]-1)[0]:
-        headPos = (randint(0, 1) * (GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
-
-    if headPos[0] == 0:
-        direction = (1, 0)
-    else:
-        direction = (-1, 0)
-    body = [headPos, headPos]
-    return ({'length':3, 'head': headPos, 'body': body, 'direction': direction, 'last': (0, 0)}, direction[0])
-
-def gameThread(gameID):
-    sleep(1)
-    gameClients = getClientsInGame(gameID)
-    for client in gameClients:
-        sendToClient(client.id, {
-            'type': 'updateEnvironment',
-            'data': {'environment': getEnvironmentExclusive(gameID, client.id)}
-        })
-    sleep(2)
-    gameClients = getClientsInGame(gameID)
-    for client in gameClients:
-        sendToClient(client.id, {
-            'type': 'startGame',
-            'data': {'id': gameID, 'start':'for real this time'}
-        })
-    while games[gameID]['state'] == 'running':
-        gameClients = getClientsInGame(gameID)
-        for client in gameClients:
-            try:
-                if int(time()) - int(clients[client.id].lastMessageTimestamp) > TIMEOUT:
-                    ct.printWarning(f"Client {client.id} timed out!")
-                    if client.id in games[gameID]['players']:
-                        games[gameID]['players'].remove(client.id)
-                        del clients[client.id]
-                else:
-                    checkFood(client.snake['head'][0], client.snake['head'][1], gameID)
-                    sendToClient(client.id, {
-                        'type': 'updateEnvironment',
-                        'data': {
-                            'environment': getEnvironmentExclusive(gameID, client.id), 
-                        }
-                    })
-            except KeyError:
-                continue
-            except RuntimeError:
-                continue
-        if len(getClientsInGame(gameID)) == 0:
-            ct.printWarning(f"Game {games[gameID]['code']} has no players, ending game")
-            games[gameID]['state'] = 'over'
-            return
-
-def checkClientTimeout(clientID):
-    if int(time()) - int(clients[clientID].lastMessageTimestamp) > TIMEOUT + 1:
-        ct.printWarning(f"Client {clientID} timed out!")
-        for gameID in games:
-            if clientID in games[gameID]['players']:
-                games[gameID]['players'].remove(clientID)
-                if len(games[gameID]['players']) == 0 and games[gameID]['state'] == 'waiting':
-                    del games[gameID]
-        del clients[clientID]
+ct.printStatus(f"Snake server is listening, IP: {SERVER_IP}")
 
 while True:
-    for i in clients:
-        checkClientTimeout(i)
+    #Check for client timeouts
+    i = 0
+    while True:
+        if i >= len(clients):
+            break
+        if not checkClientTimeout(list(clients.keys())[i]):
+            i += 1
+
+
     try:
-        data, addr = serverSocket.recvfrom(4096)
+        data, addr = serverSocket.recvfrom(4096) 
+        #Receive data from all clients. 
+        #This current method on both the client and server side is not perfect, as any messages sent while the server is processing a message will be lost, and messages are not properly acnowledged.
     except Exception as e:
         if type(e) == socket.timeout:
             continue
@@ -241,131 +302,138 @@ while True:
     try:
         data = json.loads(data)
 
-        if data['type'] != 'ping' and data['type'] != 'connect':
+        try:
+            clientID = data['data']['id'] #Update the last message timestamp of the client
             clients[data['data']['id']].lastMessageTimestamp = str(int(time()))
+        except KeyError:
+            pass
 
-        if data['type'] == 'connect':
-            clientID = str(uuid4())
-            clients[clientID] = Client(data['data']['name'], clientID, addr)
+        match data['type']:
+            case 'ping': #Client is attempting to find the server, provide a response
+                serverSocket.sendto(json.dumps({'type': 'ping', 'data': {'blank':'blank'}}).encode(), addr)
+                ct.printStatus(f"Ping from IP {addr[0]}")
 
-            sendToClient(clientID, {'type': 'connect', 'data': {'id': clientID}})
-            ct.printStatus(f"Client connected: {clientID} / {clients[clientID].name}")
+            case 'connect': #Client is attempting to connect to the server, generate a client instance and respond with their client ID
+                clientID = str(uuid4())
+                clients[clientID] = Client(data['data']['name'], clientID, addr)
 
-        elif data['type'] == 'disconnect':
-            clientID = data['data']['id']
-            sendToClient(clientID, {'type': 'disconnect', 'data': {'id': clientID}})
-            ct.printStatus(f"Client disconnected: {clientID} / {clients[clientID].name}")
-            for gameID in games:
-                if clientID in games[gameID]['players']:
-                    games[gameID]['players'].remove(clientID)
-                    if len(games[gameID]['players']) == 0 and games[gameID]['state'] == 'waiting':
-                        del games[gameID]
-            del clients[clientID]
+                sendToClient(clientID, {'type': 'connect', 'data': {'id': clientID}})
+                ct.printStatus(f"Client connected: {clientID} / {clients[clientID].name}")
 
-        elif data['type'] == 'ping':
-            serverSocket.sendto(json.dumps({'type': 'ping', 'data': {'blank':'blank'}}).encode(), addr)
-            ct.printStatus(f"Ping from IP {addr[0]}")
+            case 'disconnect': #Client is disconnecting from the server, remove them from the client list and any games they are in
+                sendToClient(clientID, {'type': 'disconnect', 'data': {'id': clientID}})
+                ct.printStatus(f"Client disconnected: {clientID} / {clients[clientID].name}")
+                i = 0
+                while True: #This style of loop is used to avoid issues with modifying the dictionary while iterating over it
+                    if i >= len(games):
+                        break
+                    gameID = list(games.keys())[i]
+                    if clientID in games[gameID]['players']:
+                        games[gameID]['players'].remove(clientID)
+                        if len(games[gameID]['players']) == 0 and games[gameID]['state'] == 'waiting':
+                            del games[gameID]
+                            i -= 1
+                    i += 1
+                del clients[clientID]
 
-        elif data['type'] == 'createGame':
-            gameID = newGame(data['data']['public'], data['data']['name'])
-            clientID = data['data']['id']
-            clients[clientID].connectToGame(gameID)
-            games[gameID]['players'].append(clientID)
+            case 'createGame': #Client is creating a new game, generate a game ID and add them to the game list
+                gameID = newGame(data['data']['public'], data['data']['name'])
+                clients[clientID].connectToGame(gameID)
+                games[gameID]['players'].append(clientID)
 
-            sendToClient(clientID, {'type': 'createGame', 'data': {'id': gameID, 'code': games[gameID]['code']}})
-            ct.printStatus(f"Game created: {gameID} with host {clientID} / {clients[clientID].name}")
+                sendToClient(clientID, {'type': 'createGame', 'data': {'id': gameID, 'code': games[gameID]['code']}})
+                ct.printStatus(f"Game created: {gameID} with host {clientID} / {clients[clientID].name}")
 
-        elif data['type'] == 'getGames':
-            gameList = []
-            print(games)
-            for game in games.values():
-                print(game)
-                if game['state'] == 'waiting' and game['public']:
-                    gameList.append({
-                        'id': game['id'],
-                        'code': game['code'],
-                        'numPlayers': len(game['players']),
-                        'hostName': clients[game['players'][0]].name,
-                        'name': game['name']
-                    })
-            gameList = sorted(gameList, key=lambda x: x['numPlayers'], reverse=True)
-            
-            sendToClient(data['data']['id'], {'type': 'getGames', 'data': {'games': gameList}})
+            case 'getGames': #Client is requesting a list of games, send a list of games that are public and waiting
+                gameList = []
+                for game in games.values():
+                    if game['state'] == 'waiting' and game['public']:
+                        gameList.append({
+                            'id': game['id'],
+                            'code': game['code'],
+                            'numPlayers': len(game['players']),
+                            'hostName': clients[game['players'][0]].name,
+                            'name': game['name']
+                        })
+                gameList = sorted(gameList, key=lambda x: x['numPlayers'], reverse=True)
 
-        elif data['type'] == 'joinGame':
-            gameCode = data['data']['code']
-            for i in games:
-                if games[i]['code'] == gameCode:
-                    gameID = gameID
-                    break
-            clientID = data['data']['id']
-            if len(games[gameID]['players'] > 6):
-                break
-            clients[clientID].connectToGame(gameID)
-            games[gameID]['players'].append(clientID)
+                sendToClient(data['data']['id'], {'type': 'getGames', 'data': {'games': gameList}})
 
-            sendToClient(clientID, {'type': 'joinGame', 'data': {'id': gameID}})
-            temp = []
-            for i in games[gameID]['players']:
-                temp.append({'name': clients[i].name, 'id': i})
-            sendToClient(games[gameID]['players'][0], {'type': 'gameStatus', 'data': {'state': games[gameID]['state'], 'players': temp}})
-            ct.printStatus(f"Game joined: {gameID} with player {clientID} / {clients[clientID].name}")
+            case 'joinGame': #Client is joining a game, add them to the game's player list
+                gameCode = data['data']['code']
 
-        elif data['type'] == 'leaveGame':
-            gameID = data['data']['gameID']
-            clientID = data['data']['id']
-            games[gameID]['players'].remove(clientID)
-            clients[clientID].gameID = None
-            ct.printStatus(f"Player {clientID} / {clients[clientID].name} left game {gameID}")
-
-        elif data['type'] == 'gameStatus':
-            clientID = data['data']['id']
-            gameID = clients[clientID].gameID
-            sendToClient(clientID, {'type': 'gameStatus', 'data': {'state': games[gameID]['state'], 'players': games[gameID]['players']}})
-
-        elif data['type'] == 'startGameReq':
-            gameID = data['data']['gameID']
-            clientID = data['data']['id']
-
-            if len(games[gameID]['players']) < MINPLAYERS:
-                sendToClient(clientID, {'type': 'startGameRes', 'data': {'fail': True, 'message': 'Not enough players'}})
-                continue
-            else:
-                games[gameID]['state'] = 'running'
-                games[gameID]['food'] = [getFoodSpawn(gameID) for i in range(games[gameID]['rules']['FOODCOUNT'])]
-
-                gameClients = getClientsInGame(gameID)
-                for client in gameClients:
-                    sendToClient(client.id, {
-                        'type': 'startGameRes', 
-                        'data': {
-                            'id': gameID,
-                            'snakeInfo': createSnakeSpawn(gameID), 
-                            'players': [client.id for client in gameClients],
-                            'gridpx': (games[gameID]['rules']['GRIDWIDTHPX'], games[gameID]['rules']['GRIDHEIGHTPX']),
-                            'blocksize': games[gameID]['rules']['BLOCKSIZE']
-                        }
-                    })
+                for i in games:
+                    #Find the game with the matching code
+                    if games[i]['code'] == gameCode:
+                        gameID = i
+                        break
                 
-                ct.printStatus(f"Game initialised: {gameID} with players {games[gameID]['players']}")
+                if len(games[gameID]['players']) > 6: #Check if the game is full
+                    break
+                
+                clients[clientID].connectToGame(gameID)
+                games[gameID]['players'].append(clientID)
 
-                gameThreads.append(threading.Thread(target=gameThread, args=(gameID,), daemon=True))
-                gameThreads[-1].start()
-        
-        elif data['type'] == 'clientUpdate':
-            clientID = data['data']['id']
-            gameID = clients[clientID].gameID
-            
-            setPlayerSnake(gameID, clientID, data['data']['snake'])
-            #setPlayerEnvironment(gameID, clientID, data['data']['environment'])
+                sendToClient(clientID, {'type': 'joinGame', 'data': {'id': gameID}})
 
-        elif data['type'] == 'kickPlayer':
-            clientID = data['data']['id']
-            playerID = data['data']['playerID']
-            gameID = data['data']['gameID']
-            games[gameID]['players'].remove(playerID)
-            clients[playerID].gameID = None
-            ct.printStatus(f"Player {playerID} / {clients[playerID].name} kicked from game {gameID}")
+                sendToClient(games[gameID]['players'][0], {'type': 'lobbyStatus', 'data': {'state': games[gameID]['state'], 'players': getLobbyList(gameID, clientID)}})
+                ct.printStatus(f"Game joined: {gameID} with player {clientID} / {clients[clientID].name}")
+
+            case 'leaveGame': #Client is leaving a game, remove them from the game's player list
+                gameID = data['data']['gameID']
+                games[gameID]['players'].remove(clientID)
+                clients[clientID].gameID = None
+                ct.printStatus(f"Player {clientID} / {clients[clientID].name} left game {gameID}")
+
+            case 'gameStatus': #Client (host) is requesting the status of a game, send the state and player list
+                gameID = clients[clientID].gameID
+                sendToClient(clientID, {'type': 'gameStatus', 'data': {'state': games[gameID]['state'], 'players': games[gameID]['players']}})
+
+            case 'startGameReq': #Client (host) is requesting to start a game, check if there are enough players and start the game
+                gameID = data['data']['gameID']
+
+                if len(games[gameID]['players']) < MINPLAYERS: #Check if there are enough players. Currently minimum is 1, but can be increased if desired
+                    sendToClient(clientID, {'type': 'startGameRes', 'data': {'fail': True, 'message': 'Not enough players'}})
+                    continue
+                else:
+                    games[gameID]['state'] = 'running'
+
+                    #Initialise the game board and spawn food. Food count is set in the game rules (default 3)
+                    games[gameID]['food'] = [getFoodSpawn(gameID) for i in range(games[gameID]['rules']['FOODCOUNT'])]
+
+                    gameClients = getClientsInGame(gameID)
+                    for client in gameClients: #Send the game start message to all players
+                        sendToClient(client.id, {
+                            'type': 'startGameRes', 
+                            'data': {
+                                'id': gameID,
+                                'snakeInfo': createSnakeSpawn(gameID), 
+                                'players': [client.id for client in gameClients],
+                                'gridpx': (games[gameID]['rules']['GRIDWIDTHPX'], games[gameID]['rules']['GRIDHEIGHTPX']),
+                                'blocksize': games[gameID]['rules']['BLOCKSIZE']
+                            }
+                        })
+                    
+                    ct.printStatus(f"Game initialised: {gameID} with players {games[gameID]['players']}")
+
+                    #Initialise and start a game thread
+                    gameThreads.append(threading.Thread(target=gameThread, args=(gameID,), daemon=True))
+                    gameThreads[-1].start()
+
+            case 'clientUpdate': #Client is updating their snake, update the server's copy of the snake
+                gameID = clients[clientID].gameID
+
+                setPlayerSnake(gameID, clientID, data['data']['snake'])
+
+            case 'kickPlayer': #Client (host) is kicking a player from the game, remove them from the player list
+                playerID = data['data']['playerID']
+                gameID = data['data']['gameID']
+                games[gameID]['players'].remove(playerID)
+                clients[playerID].gameID = None
+                sendToClient(playerID, {'type': 'kickPlayer', 'data': {'id': game}})
+                sendToClient(clientID, {'type': 'lobbyStatus', 'data': {'state': games[gameID]['state'], 'players': getLobbyList(gameID)}})
+                ct.printStatus(f"Player {playerID} / {clients[playerID].name} kicked from game {gameID}")
+
 
     except Exception as e:
         if type(e) == json.decoder.JSONDecodeError:
@@ -375,5 +443,3 @@ while True:
         else:
             print("Error", e)
             continue
-    
-    

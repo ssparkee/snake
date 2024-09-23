@@ -1,7 +1,6 @@
-BEFORE NEXT TUESDAY
+BEFORE TUESDAY
     -add comments
     -add two page report
-    -add the private join game thing
 
 improve collision, something still wrong
 snake predictive movement
@@ -10,10 +9,12 @@ work on ui***
     -loading screen, make snake get longer?
     -game over screen
     -respawn button
+    -clean kicking player, add a message
 lobby list command
 different modes:
     -deathmatch
     -time challenge
     -team deathmatch??
 
+give each game a different port (could maybe improve performance?)
 use pygame ce

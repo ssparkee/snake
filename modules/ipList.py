@@ -1,3 +1,9 @@
+"""
+Used to:
+- Get the local IP address of the machine
+- Get a list of stored IP addresses
+- Add a new IP address to the list
+"""
 import socket
 
 def getLocalIP():

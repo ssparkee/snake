@@ -63,7 +63,11 @@ def newGame(public=True, name='test name'):
 
 def sendToClient(clientID, data):
     """Sends data to a the matching address of a client"""
-    serverSocket.sendto(json.dumps(data).encode(), clients[clientID].addr)
+    try:
+        serverSocket.sendto(json.dumps(data).encode(), clients[clientID].addr)
+    except TimeoutError:
+        ct.printWarning(f'Timeout error sending to client {clientID} / {clients[clientID].addr}!')
+        pass
 
 def getPlayerSnake(gameID, clientID):
     """Gets the snake of a player"""
@@ -382,7 +386,7 @@ while True:
 
                 sendToClient(clientID, {'type': 'joinGame', 'data': {'id': gameID}})
 
-                sendToClient(games[gameID]['players'][0], {'type': 'lobbyStatus', 'data': {'state': games[gameID]['state'], 'players': getLobbyList(gameID, clientID)}})
+                sendToClient(games[gameID]['players'][0], {'type': 'lobbyStatus', 'data': {'state': games[gameID]['state'], 'players': getLobbyList(gameID, games[gameID]['players'][0])}})
                 ct.printStatus(f"Game joined: {gameID} with player {clientID} / {clients[clientID].name}")
 
             case 'leaveGame': #Client is leaving a game, remove them from the game's player list

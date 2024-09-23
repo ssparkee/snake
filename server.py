@@ -208,7 +208,19 @@ def gameThread(gameID):
             games[gameID]['state'] = 'over'
             return
 
+def checkClientTimeout(clientID):
+    if int(time()) - int(clients[clientID].lastMessageTimestamp) > TIMEOUT + 1:
+        ct.printWarning(f"Client {clientID} timed out!")
+        for gameID in games:
+            if clientID in games[gameID]['players']:
+                games[gameID]['players'].remove(clientID)
+                if len(games[gameID]['players']) == 0 and games[gameID]['state'] == 'waiting':
+                    del games[gameID]
+        del clients[clientID]
+
 while True:
+    for i in clients:
+        checkClientTimeout(i)
     try:
         data, addr = serverSocket.recvfrom(4096)
     except Exception as e:
@@ -287,6 +299,8 @@ while True:
                     gameID = gameID
                     break
             clientID = data['data']['id']
+            if len(games[gameID]['players'] > 6):
+                break
             clients[clientID].connectToGame(gameID)
             games[gameID]['players'].append(clientID)
 
@@ -346,11 +360,12 @@ while True:
             #setPlayerEnvironment(gameID, clientID, data['data']['environment'])
 
         elif data['type'] == 'kickPlayer':
-            clientID = data['data']['clientID']
+            clientID = data['data']['id']
+            playerID = data['data']['playerID']
             gameID = data['data']['gameID']
-            games[gameID]['players'].remove(clientID)
-            clients[clientID].gameID = None
-            ct.printStatus(f"Player {clientID} / {clients[clientID].name} kicked from game {gameID}")
+            games[gameID]['players'].remove(playerID)
+            clients[playerID].gameID = None
+            ct.printStatus(f"Player {playerID} / {clients[playerID].name} kicked from game {gameID}")
 
     except Exception as e:
         if type(e) == json.decoder.JSONDecodeError:

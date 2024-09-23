@@ -8,7 +8,7 @@ class LobbyMembersList:
     membersList = []
     lobbyRects = []
     highlightRect = None
-    def __init__(self, width, height, screen, clientID, members=[], startY=60):
+    def __init__(self, width, height, screen, clientID, members=[], startY=80):
         self.WIDTH = width
         self.HEIGHT = height
         self.screen = screen
@@ -25,6 +25,18 @@ class LobbyMembersList:
                 self.lobbyRects.append(pygame.Rect(containerX, containerY, 200, 50))
 
     def drawList(self):
+        if len(self.membersList) < 1:
+            tempRect = pygame.Rect(
+                (self.WIDTH - 300) // 2,
+                self.startY + 60,
+                300,
+                50
+            )
+            pygame.draw.rect(self.screen, DGREY, tempRect)
+            font = pygame.font.Font(None, 42)
+            text = font.render('No other players :(', True, (0,0,0))
+            self.screen.blit(text, (tempRect.x + 10, tempRect.y + 10))
+            return
         for i, member in enumerate(self.membersList):
             memberRect = self.lobbyRects[i]
             if memberRect == self.highlightRect:

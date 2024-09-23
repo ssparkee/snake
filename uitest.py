@@ -6,6 +6,7 @@ import modules.lobbyDialog as ld
 import modules.ipList as ipList
 import modules.snake as snake
 import modules.lobbyMembersList
+from modules.colours import *
 import pygame
 from pygame.locals import *
 import socket
@@ -17,8 +18,6 @@ from time import sleep
 
 pygame.init()
 
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
 WIDTH, HEIGHT = 600, 600
 SERVER_IP = None
 ls.init(WIDTH, HEIGHT)
@@ -30,7 +29,7 @@ snakeText = connectionFont.render('Connecting to server...', True, WHITE)
 text_rect = snakeText.get_rect(center=(WIDTH // 2, HEIGHT // 6-30))
 
 active = False
-gameID, snakeInfo, gameEnvironment, clientID, gamesList = None, None, None, None, None
+gameID, snakeInfo, gameEnvironment, clientID, gamesList, gameCode = None, None, None, None, None, None
 gameHost = False
 gameStart = 0
 
@@ -55,7 +54,7 @@ def fakeGamesList():
     return gamesList
 
 def socketListener():
-    global gameID, clientID, gameHost, snakeInfo, gameStart, gameEnvironment, gamesList, windowIndex, activeWindow
+    global gameID, clientID, gameHost, snakeInfo, gameStart, gameEnvironment, gamesList, windowIndex, activeWindow, gameCode
     while True:
         try:
             data, addr = clientSocket.recvfrom(4096)
@@ -82,6 +81,7 @@ def socketListener():
             elif data['type'] == 'createGame':
                 ct.printStatus(f"Game created: {data['data']['code']}")
                 gameID = data['data']['id']
+                gameCode = data['data']['code']
                 gameHost = True
                 activeWindow = lobbyMembersWindow
                 windowIndex = 6
@@ -184,7 +184,7 @@ def createLobbySubmit(lobbyInfo):
 
 def createLobby():
     ct.printStatus("Creating lobby")
-    game_modes = ["Last Man Standing", "Time Trial"]
+    game_modes = ["Last Man Standing"] #, "Time Trial"]
     dialog = ld.LobbyDialog(game_modes, createLobbySubmit, marginLeft=25, width=300, height=500)
     dialog.run_dialog()
 
@@ -217,6 +217,7 @@ nameWindow = sd.submitDialog(WIDTH, HEIGHT, screen, "Welcome to Adam's Snake!", 
 lobbiesWindow = ll.lobbiesList(WIDTH, HEIGHT, screen, [], refreshLobbies, createLobby, joinPrivate, joinLobby)
 
 lobbyMembersWindow = modules.lobbyMembersList.LobbyMembersList(WIDTH, HEIGHT, screen, 0, [])
+startRectCol = DGREY
 
 textBoxWindows = [cfWindow, nameWindow]
 
@@ -232,6 +233,11 @@ connectionAttemptState = 0
 pygame.mouse.set_cursor(*pygame.cursors.diamond)
 while True:
     frameNum += 1
+
+    if frameNum % 20 == 0 and clientID is not None:
+        print('check conn')
+        clientSocket.sendto(json.dumps({'type': 'clientCheck', 'data': {'id':clientID}}).encode(), (SERVER_IP, 65432))
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             quitProgram()
@@ -253,6 +259,9 @@ while True:
                 memberID = lobbyMembersWindow.handleMouseClick(pygame.mouse.get_pos())
                 if memberID is not None:
                     kickPlayer(memberID)
+                elif startRect.collidepoint(event.pos):
+                    print('game start button')
+                    clientSocket.sendto(json.dumps({'type': 'startGameReq', 'data': {'id': clientID, 'gameID': gameID}}).encode(), (SERVER_IP, 65432))
 
             elif activeWindow in textBoxWindows:
                 if activeWindow.input_box.collidepoint(event.pos):
@@ -325,8 +334,23 @@ while True:
         lobbiesWindow.setHighlights(pygame.mouse.get_pos())
 
     elif windowIndex == 6:
-        snakeText = connectionFont.render('Press start when ready!', True, WHITE)
-        screen.blit(snakeText, text_rect)
+        readyText = connectionFont.render('Press start when ready!', True, WHITE)
+        readyRect = readyText.get_rect(center=(WIDTH // 2, HEIGHT // 6 - 30))
+
+        codeText = connectionFont.render(f'Code: {gameCode}', True, WHITE)
+        codeRect = codeText.get_rect(center=(WIDTH // 2, HEIGHT // 6))
+
+        startText = pygame.font.Font(None, 64).render('Start', True, BLACK)
+        startRect = pygame.Rect((WIDTH - 300) // 2, HEIGHT - 100, 300, 50)
+
+        screen.blit(codeText, codeRect)
+        screen.blit(readyText, readyRect)
+
+        startRectCol = DGREY
+        if startRect.collidepoint(pygame.mouse.get_pos()):
+            startRectCol = HIGHLIGHT_COLOR
+        pygame.draw.rect(screen, startRectCol, startRect)
+        screen.blit(startText, (startRect.centerx - startText.get_width() // 2, startRect.y + 5))
 
         lobbyMembersWindow.setHighlights(pygame.mouse.get_pos())
         lobbyMembersWindow.drawList()
@@ -340,7 +364,7 @@ while True:
         ls.drawLoadingSnake(clock, screen, moveSegments=(frameNum % 3 == 0))
 
     elif windowIndex == 10:
-        if len(snakeInfo) == 0:
+        if len(snakeInfo) == 0 or snakeInfo is None:
             socketThread.join(timeout=0.1)
             clientSocket.sendto(json.dumps({'type': 'disconnect', 'data': {
                                 'id': clientID}}).encode(), (SERVER_IP, 65432))

@@ -311,6 +311,8 @@ while True:
                     elif activeWindow == privateWindow: #User has entered a private lobby code, try to join the lobby
                         joinLobby(activeWindow.input_text)
 
+                    
+
                     activeWindow.input_text = '' #Clear the text input
                 elif event.key == K_BACKSPACE:
                     activeWindow.input_text = activeWindow.input_text[:-1]

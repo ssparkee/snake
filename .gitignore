@@ -1,4 +1,7 @@
 /server util/
 /build/
+/dist/client/
+/dist/server/
+/__pycache__/
 client.spec
 server.spec

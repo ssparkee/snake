@@ -173,6 +173,12 @@ class LobbyDialog:
             if self.inputActive:
                 if event.key == pygame.K_RETURN:
                     print(f"Lobby Name: {self.lobby_name}, Public: {self.is_public}, Game Mode: {self.selected_game_mode}")
+                    self.running = False
+                    self.submitFunction({
+                        'lobby': self.lobby_name,
+                        'public': self.is_public,
+                        'mode': self.selected_game_mode
+                    })
                 elif event.key == pygame.K_BACKSPACE:
                     self.lobby_name = self.lobby_name[:-1]
                 else:

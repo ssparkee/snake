@@ -12,7 +12,6 @@ class LobbyDialog:
     def __init__(self, game_modes, submitFunction, marginLeft=25, width=300, height=500):
         self.submitFunction = submitFunction
         self.screen = pygame.display.set_mode((width, height))
-        pygame.display.set_caption("Create Lobby")
         self.WIDTH = width
         self.HEIGHT = height
         self.marginLeft = marginLeft

@@ -253,6 +253,8 @@ pygame.mouse.set_cursor(*pygame.cursors.diamond)
 """Initialise variables for the pygame windows"""
 ls.init(WIDTH, HEIGHT)
 
+snakeImg = pygame.image.load('snake.png')
+
 connectionFont = pygame.font.Font(None, 36)
 snakeText = connectionFont.render('Connecting to server...', True, WHITE)
 text_rect = snakeText.get_rect(center=(WIDTH // 2, HEIGHT // 6-30))
@@ -338,6 +340,7 @@ while True:
             activeWindow = nameWindow
             nameWindow.setHighlights(pygame.mouse.get_pos())
             nameWindow.displayWindow()
+            screen.blit(snakeImg, ((WIDTH - snakeImg.get_width()) // 2, 50))
 
         case 1: #Loading screen, attempt to connect to the server
             screen.blit(snakeText, text_rect)

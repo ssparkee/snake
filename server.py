@@ -1,17 +1,21 @@
+"""Python inbuilt modules"""
 import socket
 from uuid import uuid4
 import json
-import pygame
-import modules.colouredText as ct
-from modules.ipList import getLocalIP
-from random import randint
 import threading
 from time import sleep, time
+from random import randint
 import os
+
+"""Change the working directory to the current file's directory"""
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+"""Small utility modules"""
+import modules.colouredText as ct
+from modules.ipList import getLocalIP
 
-class Client: #Class for client information
+class Client: 
+    """Class for client information"""
     def __init__(self, name, clientID, addr, gameID=None):
         self.id = clientID
         self.snake = {

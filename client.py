@@ -1,14 +1,4 @@
-import modules.loadingSnake as ls
-import modules.submitDialog as sd
-import modules.colouredText as ct
-import modules.lobbiesList as ll
-import modules.lobbyDialog as ld
-import modules.ipList as ipList
-import modules.snake as snake
-import modules.lobbyMembersList
-from modules.colours import *
-import pygame
-from pygame.locals import *
+"""Python inbuilt modules"""
 import socket
 import json
 import time
@@ -16,7 +6,28 @@ import threading
 from random import randint
 from time import sleep
 import os
+
+"""Change the working directory to the current file's directory"""
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+"""Elements of the pygame window"""
+import modules.loadingSnake as ls
+import modules.submitDialog as sd
+import modules.lobbiesList as ll
+import modules.lobbyDialog as ld
+import modules.lobbyMembersList
+
+"""Main snake game module"""
+import modules.snake as snake
+
+"""Small utility modules"""
+from modules.colours import *
+import modules.colouredText as ct
+import modules.ipList as ipList
+
+"""Pygame modules"""
+import pygame
+from pygame.locals import *
 
 WIDTH, HEIGHT = 600, 600
 SERVER_IP = None
@@ -373,8 +384,10 @@ while True:
             cfWindow.displayWindow()
             if ip is not None:
                 ips = [str(ip)]
+                print(ips)
                 startLoadTime = time.time()
                 windowIndex = 1
+                connectionAttemptState = 0
 
         case 3: #Loading screen, get the active lobbies list
             screen.blit(snakeText, text_rect)

@@ -3,7 +3,7 @@ Cool loading snake animation
 """
 import pygame
 import math
-from snake.modules.colours import *
+from modules.colours import *
 
 # Wheel settings
 num_segments = 12

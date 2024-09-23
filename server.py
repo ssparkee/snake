@@ -291,6 +291,10 @@ while True:
             games[gameID]['players'].append(clientID)
 
             sendToClient(clientID, {'type': 'joinGame', 'data': {'id': gameID}})
+            temp = []
+            for i in games[gameID]['players']:
+                temp.append({'name': clients[i].name, 'id': i})
+            sendToClient(games[gameID]['players'][0], {'type': 'gameStatus', 'data': {'state': games[gameID]['state'], 'players': temp}})
             ct.printStatus(f"Game joined: {gameID} with player {clientID} / {clients[clientID].name}")
 
         elif data['type'] == 'leaveGame':
@@ -340,6 +344,13 @@ while True:
             
             setPlayerSnake(gameID, clientID, data['data']['snake'])
             #setPlayerEnvironment(gameID, clientID, data['data']['environment'])
+
+        elif data['type'] == 'kickPlayer':
+            clientID = data['data']['clientID']
+            gameID = data['data']['gameID']
+            games[gameID]['players'].remove(clientID)
+            clients[clientID].gameID = None
+            ct.printStatus(f"Player {clientID} / {clients[clientID].name} kicked from game {gameID}")
 
     except Exception as e:
         if type(e) == json.decoder.JSONDecodeError:

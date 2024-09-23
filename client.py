@@ -63,7 +63,7 @@ def commandThread():
                 clientSocket.sendto(json.dumps({'type': 'disconnect', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
                 break
             elif data == 'createGame':
-                clientSocket.sendto(json.dumps({'type': 'createGame', 'data': {'id': clientID}}).encode(), (SERVER_IP, 65432))
+                clientSocket.sendto(json.dumps({'type': 'createGame', 'data': {'id': clientID, 'public':True, 'name':'nothing rn'}}).encode(), (SERVER_IP, 65432))
             elif data == 'joinGame':
                 userGameID = input('enter game code: ')
                 clientSocket.sendto(json.dumps({'type': 'joinGame', 'data': {'id': clientID, 'code': userGameID}}).encode(), (SERVER_IP, 65432))

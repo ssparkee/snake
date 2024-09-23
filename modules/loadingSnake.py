@@ -1,13 +1,6 @@
 import pygame
 import math
-
-# Colors
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-GREY = (100, 100, 100)
-LEAF_GREEN = (0, 200, 0)
+from modules.colours import *
 
 # Wheel settings
 num_segments = 12
@@ -65,7 +58,7 @@ def drawLoadingSnake(clock, screen, moveSegments=True):
     # Draw circles for the snake and the apple
     for i, pos in enumerate(circle_positions):
         # Use dynamic circle radius
-        pygame.draw.circle(screen, GREY, pos, CIRCLE_RADIUS)
+        pygame.draw.circle(screen, DGREY, pos, CIRCLE_RADIUS)
 
     pygame.draw.circle(screen, apple_color,
                        circle_positions[apple_position], CIRCLE_RADIUS)

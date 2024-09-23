@@ -1,10 +1,6 @@
 import pygame
 from time import time
-
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-GRAY = (200, 200, 200)
-HIGHLIGHT_COLOR = (127, 255, 212)
+from modules.colours import *
 
 
 class lobbiesList():
@@ -34,7 +30,7 @@ class lobbiesList():
         if rect == self.highlightRect:
             return HIGHLIGHT_COLOR
         else:
-            return GRAY
+            return LGREY
 
     def displayWindow(self):
         self.screen.fill(BLACK)
@@ -50,7 +46,7 @@ class lobbiesList():
             if self.highlightRect == rect:
                 rectColour = HIGHLIGHT_COLOR
             else:
-                rectColour = GRAY
+                rectColour = LGREY
             pygame.draw.rect(self.screen, rectColour, rect)
 
             font = pygame.font.Font(None, 42)

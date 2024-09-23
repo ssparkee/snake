@@ -67,24 +67,16 @@ class LobbyMembersList:
         return None
 
     def drawX(self, memberRect):
-        # Define the position and size for the "X"
         offset_x = memberRect.width - 40
         offset_y = memberRect.height - 38
         line_length = 24
         line_width = 6
 
-        # Calculate the start and end points for the "X"
         start_pos_1 = (memberRect.x + offset_x, memberRect.y + offset_y)
-        end_pos_1 = (memberRect.x + offset_x + line_length,
-                     memberRect.y + offset_y + line_length)
+        end_pos_1 = (memberRect.x + offset_x + line_length, memberRect.y + offset_y + line_length)
 
-        start_pos_2 = (memberRect.x + offset_x,
-                       memberRect.y + offset_y + line_length)
-        end_pos_2 = (memberRect.x + offset_x +
-                     line_length, memberRect.y + offset_y)
+        start_pos_2 = (memberRect.x + offset_x, memberRect.y + offset_y + line_length)
+        end_pos_2 = (memberRect.x + offset_x + line_length, memberRect.y + offset_y)
 
-        # Draw the red "X"
-        pygame.draw.line(self.screen, (255, 0, 0),
-                         start_pos_1, end_pos_1, line_width)  # Red color
-        pygame.draw.line(self.screen, (255, 0, 0),
-                         start_pos_2, end_pos_2, line_width)
+        pygame.draw.line(self.screen, (255, 0, 0), start_pos_1, end_pos_1, line_width)
+        pygame.draw.line(self.screen, (255, 0, 0), start_pos_2, end_pos_2, line_width)

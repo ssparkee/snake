@@ -23,12 +23,11 @@ def init(width, height, radius=100, circle_radius=10):
     EYE_RADIUS = 2
     EYE_OFFSET = 7
 
-    # Adjust leaf size and position based on circle radius
-    LEAF_WIDTH = CIRCLE_RADIUS // 2.5  # Scale leaf width
-    LEAF_HEIGHT = CIRCLE_RADIUS // 1.5  # Scale leaf height
-    # Leaf horizontal position relative to apple
+    LEAF_WIDTH = CIRCLE_RADIUS // 2.5
+    LEAF_HEIGHT = CIRCLE_RADIUS // 1.5
+
     LEAF_OFFSET_X = -CIRCLE_RADIUS // 5
-    LEAF_OFFSET_Y = -CIRCLE_RADIUS * 1.6  # Leaf vertical position relative to apple
+    LEAF_OFFSET_Y = -CIRCLE_RADIUS * 1.6
 
 
 def get_circle_positions():
@@ -58,13 +57,11 @@ def drawLoadingSnake(clock, screen, moveSegments=True):
     else:
         apple_position = (current_segment + 1) % num_segments
 
-    # Draw circles for the snake and the apple
+    #Draw circles for the snake and the apple
     for i, pos in enumerate(circle_positions):
-        # Use dynamic circle radius
         pygame.draw.circle(screen, DGREY, pos, CIRCLE_RADIUS)
 
-    pygame.draw.circle(screen, apple_color,
-                       circle_positions[apple_position], CIRCLE_RADIUS)
+    pygame.draw.circle(screen, apple_color, circle_positions[apple_position], CIRCLE_RADIUS)
 
     if moveSegments:
         for i in range(snake_length - 1, 0, -1):
@@ -75,21 +72,19 @@ def drawLoadingSnake(clock, screen, moveSegments=True):
     apple_pos = circle_positions[apple_position]
     head_look = circle_positions[apple_position-1]
 
-    # Define the rectangle for the leaf, adjusted to the circle size
+    #Rectangular area for the leaf
     leaf_rect = pygame.Rect(apple_pos[0] + LEAF_OFFSET_X,
                             apple_pos[1] + LEAF_OFFSET_Y, LEAF_WIDTH, LEAF_HEIGHT)
 
-    # Create the leaf surface
+    #Create a leaf surface
     leaf_surface = pygame.Surface((LEAF_WIDTH, LEAF_HEIGHT), pygame.SRCALPHA)
     pygame.draw.ellipse(leaf_surface, LEAF_GREEN,
                         (0, 0, LEAF_WIDTH, LEAF_HEIGHT))
 
     rotated_leaf = pygame.transform.rotate(leaf_surface, -60)
-
-    # Blit (draw) the rotated leaf on the screen
     screen.blit(rotated_leaf, leaf_rect.topleft)
 
-    # Adjust head angle for eye positioning
+    #Adjust the head angle based on the apple's position
     head_angle = math.atan2(
         head_look[1] - head_position[1], head_look[0] - head_position[0])
 
@@ -106,17 +101,15 @@ def drawLoadingSnake(clock, screen, moveSegments=True):
         int(math.sin(head_angle - math.pi / 4) * EYE_OFFSET)
     )
 
-    # Draw snake head and eyes
+    #Draw snake head and eyes
     for i, segment in enumerate(snake_segments):
         if i == 0:
-            pygame.draw.circle(screen, head_color,
-                               head_position, CIRCLE_RADIUS)
+            pygame.draw.circle(screen, head_color, head_position, CIRCLE_RADIUS)
             if CIRCLE_RADIUS == 10:
                 pygame.draw.circle(screen, WHITE, left_eye_position, EYE_RADIUS)
                 pygame.draw.circle(screen, WHITE, right_eye_position, EYE_RADIUS)
         else:
-            pygame.draw.circle(screen, body_color,
-                               circle_positions[segment], CIRCLE_RADIUS)
+            pygame.draw.circle(screen, body_color, circle_positions[segment], CIRCLE_RADIUS)
 
     if moveSegments:
         current_segment = (current_segment + 1) % num_segments

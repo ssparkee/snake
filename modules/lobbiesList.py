@@ -100,7 +100,6 @@ class lobbiesList():
         pygame.display.flip()
 
     def updateLobbies(self):
-        #startY = (self.HEIGHT - (len(self.lobbies) * (self.containerHeight + self.containerMargin))) // 2
         startY = self.startY
         for i, lobby in enumerate(self.lobbies):
             if i > 5:

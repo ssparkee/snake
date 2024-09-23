@@ -1,1 +1,4 @@
 /server util/
+/build/
+client.spec
+server.spec

@@ -15,6 +15,8 @@ import time
 import threading
 from random import randint
 from time import sleep
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 WIDTH, HEIGHT = 600, 600
 SERVER_IP = None

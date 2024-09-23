@@ -7,6 +7,8 @@ from modules.ipList import getLocalIP
 from random import randint
 import threading
 from time import sleep, time
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
 class Client: #Class for client information

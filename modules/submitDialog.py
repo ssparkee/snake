@@ -1,7 +1,6 @@
 import pygame
 from time import time
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
+from modules.colours import *
 
 class submitDialog():
     def __init__(self, width, height, screen, firstline, secondline, charLimit=12):

@@ -20,3 +20,5 @@ different modes:
 give each game a different port (could maybe improve performance?)
 sync movement frames
 use pygame ce
+
+known error - you can time out while creating lobby

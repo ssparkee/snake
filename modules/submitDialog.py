@@ -65,4 +65,3 @@ class SubmitDialog():
 
         self.buttonSurface.blit(self.submitButtonText, self.submitButtonTextRect)
         self.screen.blit(self.buttonSurface, (self.buttonRect.x, self.buttonRect.y))
-    

@@ -37,24 +37,3 @@ class ConfirmDialog():
 
         pygame.draw.rect(self.screen, self.buttonColour, self.confirmButtonRect)
         self.screen.blit(self.confirmButtonText, (self.confirmButtonRect.x + self.confirmButtonRect.width // 2 - self.confirmButtonTextRect.width // 2, self.confirmButtonRect.y + self.confirmButtonRect.height // 2 - self.confirmButtonTextRect.height // 2))
-
-def test():
-    print("Confirmed")
-
-if __name__ == "__main__":
-    pygame.init()
-    screen = pygame.display.set_mode((800, 600))
-    dialog = ConfirmDialog(800, 600, screen, "Are you sure?", "This action cannot be undone.", test)
-    running = True
-    while running:
-        screen.fill(BLACK)
-        dialog.setHighlights(pygame.mouse.get_pos())
-        dialog.displayWindow()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if dialog.confirmButtonRect.collidepoint(pygame.mouse.get_pos()):
-                    dialog.confirmFunc()
-        pygame.display.flip()
-    pygame.quit()

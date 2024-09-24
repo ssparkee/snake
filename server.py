@@ -255,7 +255,6 @@ def getLobbyList(gameID, clientID=None):
             temp.append({'name': f"{clients[i].name} (you)", 'id': i})
         else:
             temp.append({'name': clients[i].name, 'id': i})
-    print(temp)
     return temp
 
 def getShortID(i):
@@ -279,7 +278,12 @@ TIMEOUT = 8
 
 """Start the server"""
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-serverSocket.bind((SERVER_IP, 65432))
+try:
+    serverSocket.bind((SERVER_IP, 65432))
+except OSError:
+    #An error occurs when the server is already running and a second instance is started, i did this a lot lol
+    ct.printError("Server could not bind to the specified IP address, meaning it is probably already running...")
+    quit()
 serverSocket.settimeout(0.1)
 
 ct.printStatus(f"Snake server is listening, IP: {SERVER_IP}")
@@ -302,7 +306,7 @@ while True:
         if type(e) == socket.timeout:
             continue
         elif type(e) == KeyboardInterrupt:
-            print("Closing server...")
+            ct.printError("Closing server...")
             serverSocket.close()
             for thread in gameThreads:
                 thread.close()
@@ -311,7 +315,7 @@ while True:
         elif type(e) == ConnectionResetError:
             continue
         else:
-            print("Error:", e)
+            ct.printError(f"Error while recieving data: {e}")
             continue
     try:
         data = json.loads(data)
@@ -454,15 +458,15 @@ while True:
                 games[gameID]['players'].remove(playerID)
                 clients[playerID].gameID = None
                 sendToClient(playerID, {'type': 'kickPlayer', 'data': {'id': game}})
-                sendToClient(clientID, {'type': 'lobbyStatus', 'data': {'state': games[gameID]['state'], 'players': getLobbyList(gameID)}})
+                sendToClient(clientID, {'type': 'lobbyStatus', 'data': {'state': games[gameID]['state'], 'players': getLobbyList(gameID, clientID)}})
                 ct.printStatus(f"Player {getShortID(clientID)} / {clients[playerID].name} kicked from game {getShortID(gameID)}")
 
 
     except Exception as e:
         if type(e) == json.decoder.JSONDecodeError:
-            print("Invalid JSON received")
+            ct.printError("Invalid JSON received")
         elif type(e) == KeyError:
-            print("Invalid data received", e)
+            ct.printError(f"Key error while processing client message: {e}")
         else:
-            print("Error", e)
+            ct.printError(f"Error while processign client message: {e}")
             continue

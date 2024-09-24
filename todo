@@ -18,4 +18,5 @@ different modes:
     -team deathmatch??
 
 give each game a different port (could maybe improve performance?)
+sync movement frames
 use pygame ce

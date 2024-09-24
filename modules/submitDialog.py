@@ -2,12 +2,9 @@ import pygame
 from time import time
 from modules.colours import *
 
-class submitDialog():
-    popup_font = pygame.font.Font(None, 28)
+class SubmitDialog():
     input_text = ''
     inputActive = False
-    submitButtonFont = pygame.font.Font(None, 36)
-    buttonSurface = pygame.Surface((150, 30))
     cursor_visible = True
 
     def __init__(self, width, height, screen, firstline, secondline, charLimit=12):
@@ -16,7 +13,11 @@ class submitDialog():
         self.screen = screen
         self.charLimit = charLimit
         self.input_box = pygame.Rect(self.WIDTH // 2 - 100, self.HEIGHT // 2, 200, 36)
-        
+
+        self.popup_font = pygame.font.Font(None, 28)
+        self.submitButtonFont = pygame.font.Font(None, 36)
+        self.buttonSurface = pygame.Surface((150, 30))
+
         self.popup_text1 = self.popup_font.render(firstline, True, WHITE)
         self.popup_text2 = self.popup_font.render(secondline, True, WHITE)
         self.popup_rect1 = self.popup_text1.get_rect(center=(self.WIDTH // 2, self.HEIGHT // 2 - 50))

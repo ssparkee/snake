@@ -6,7 +6,7 @@ from time import time
 from modules.colours import *
 
 
-class lobbiesList():
+class LobbiesList():
     """
     Class to display the list of lobbies available to join.
     """

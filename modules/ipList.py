@@ -25,7 +25,6 @@ def getIPList():
     for line in listfile:
         ipList.append(line.strip())
     listfile.close()
-    print(ipList)
     return ipList
 
 

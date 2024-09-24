@@ -4,6 +4,7 @@ This module contains the LobbyDialog class, which is used to create a dialog box
 import pygame
 from time import time
 from modules.colours import *
+import modules.colouredText as ct
 
 class LobbyDialog:
     """
@@ -163,7 +164,7 @@ class LobbyDialog:
 
             #Handle submit button click
             if self.submit_button_rect.collidepoint(event.pos):
-                print(f"Lobby Name: {self.lobby_name}, Public: {self.is_public}, Game Mode: {self.selected_game_mode}")
+                ct.printStatus(f"Lobby Name: {self.lobby_name}, Public: {self.is_public}, Game Mode: {self.selected_game_mode}")
                 self.running = False
                 self.submitFunction({
                     'lobby':self.lobby_name,

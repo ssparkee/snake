@@ -2,5 +2,6 @@
 /build/
 /dist/
 /modules/__pycache__/
+/__pycache__/
 client.spec
 server.spec

@@ -282,7 +282,7 @@ FOODCOUNT = 3
 
 SERVER_IP = getLocalIP()
 MINPLAYERS = 1
-TIMEOUT = 8
+TIMEOUT = 60
 
 """Start the server"""
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -331,6 +331,8 @@ while True:
         validID = False
         try:
             clientID = data['data']['id']
+            # Update the last message timestamp of the client
+            clients[data['data']['id']].lastMessageTimestamp = str(int(time()))
         except KeyError:
             clientID = ''
             pass
@@ -338,9 +340,6 @@ while True:
         if doesTypeRequireID(data):
             if isClientId(clientID):
                 validID = True
-
-                # Update the last message timestamp of the client
-                clients[data['data']['id']].lastMessageTimestamp = str(int(time()))
             else:
                 ct.printWarning(f"Client {getShortID(clientID)} attempted to send a message without a valid client ID")
         else:

@@ -162,7 +162,7 @@ def createSnakeSpawn(gameID, currentSpawns):
     - On a random row, but not the top or bottom row
     """
     headPos = (randint(0, 1) * (GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
-    while isOccupied(gameID, headPos[0], headPos[1])[0] or isOccupied(gameID, headPos[0], headPos[1]+1)[0] or isOccupied(gameID, headPos[0], headPos[1]-1)[0] or headPos in currentSpawns:
+    while isOccupied(gameID, headPos[0], headPos[1])[0] or isOccupied(gameID, headPos[0], headPos[1]+1)[0] or isOccupied(gameID, headPos[0], headPos[1]-1)[0] or headPos in currentSpawns or (headPos[0], headPos[1]+1) in currentSpawns or (headPos[0], headPos[1]-1) in currentSpawns:
         headPos = (randint(0, 1) * (GRIDWIDTH-1), randint(0, GRIDHEIGHT-1))
 
     #Set the direction of the snake based on the spawn location

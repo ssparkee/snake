@@ -102,11 +102,14 @@ def socketListener():
                     lobbyMembersWindow.updateMembersList(data['data']['players'], clientID)
 
                 case 'joinGame': #Join game successful, get the game ID and display the 'waiting for host' screen
-                    ct.printStatus(f"Game joined: {data['data']['id']}")
-                    gameID = data['data']['id']
-                    gameHost = False
-                    activeWindow = None
-                    windowIndex = 7
+                    if data['data']['success']:
+                        ct.printStatus(f"Game joined: {data['data']['id']}")
+                        gameID = data['data']['id']
+                        gameHost = False
+                        activeWindow = None
+                        windowIndex = 7
+                    else:
+                        returnToLobbyList(False)
 
                 case 'getGames': #Response from the server with the active games list
                     ct.printStatus(f"Games: {data['data']['games']}")

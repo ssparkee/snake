@@ -258,6 +258,10 @@ def getLobbyList(gameID, clientID=None):
     print(temp)
     return temp
 
+def getShortID(i):
+    """Gets a shortened version of an ID for server logging"""
+    return i[0:7]
+
 """Initialise variables"""
 clients = {}
 games = {}
@@ -328,11 +332,11 @@ while True:
                 clients[clientID] = Client(data['data']['name'], clientID, addr)
 
                 sendToClient(clientID, {'type': 'connect', 'data': {'id': clientID}})
-                ct.printStatus(f"Client connected: {clientID} / {clients[clientID].name}")
+                ct.printStatus(f"Client connected: {getShortID(clientID)} / {clients[clientID].name}")
 
             case 'disconnect': #Client is disconnecting from the server, remove them from the client list and any games they are in
                 sendToClient(clientID, {'type': 'disconnect', 'data': {'id': clientID}})
-                ct.printStatus(f"Client disconnected: {clientID} / {clients[clientID].name}")
+                ct.printStatus(f"Client disconnected: {getShortID(clientID)} / {clients[clientID].name}")
                 i = 0
                 while True: #This style of loop is used to avoid issues with modifying the dictionary while iterating over it
                     if i >= len(games):
@@ -352,11 +356,15 @@ while True:
                 games[gameID]['players'].append(clientID)
 
                 sendToClient(clientID, {'type': 'createGame', 'data': {'id': gameID, 'code': games[gameID]['code']}})
-                ct.printStatus(f"Game created: {gameID} with host {clientID} / {clients[clientID].name}")
+                ct.printStatus(f"Game created: {getShortID(gameID)} with host {getShortID(clientID)} / {clients[clientID].name}")
 
             case 'getGames': #Client is requesting a list of games, send a list of games that are public and waiting
                 gameList = []
-                for game in games.values():
+                i = 0
+                while True:
+                    if i >= len(games.values()):
+                        break
+                    game = list(games.values())[i]
                     if game['state'] == 'waiting' and game['public']:
                         gameList.append({
                             'id': game['id'],
@@ -365,6 +373,7 @@ while True:
                             'hostName': clients[game['players'][0]].name,
                             'name': game['name']
                         })
+                    i += 1
                 gameList = sorted(gameList, key=lambda x: x['numPlayers'], reverse=True)
 
                 sendToClient(data['data']['id'], {'type': 'getGames', 'data': {'games': gameList}})
@@ -372,28 +381,33 @@ while True:
             case 'joinGame': #Client is joining a game, add them to the game's player list
                 gameCode = data['data']['code']
 
+                gameID = None
                 for i in games:
                     #Find the game with the matching code
                     if games[i]['code'] == gameCode:
                         gameID = i
                         break
                 
-                if len(games[gameID]['players']) > 6: #Check if the game is full
-                    break
-                
-                clients[clientID].connectToGame(gameID)
-                games[gameID]['players'].append(clientID)
+                if gameID is not None:
+                    if len(games[gameID]['players']) > 6: #Check if the game is full
+                        break
+                    
+                    clients[clientID].connectToGame(gameID)
+                    games[gameID]['players'].append(clientID)
 
-                sendToClient(clientID, {'type': 'joinGame', 'data': {'id': gameID}})
+                    sendToClient(clientID, {'type': 'joinGame', 'data': {'id': gameID, 'success':True}})
 
-                sendToClient(games[gameID]['players'][0], {'type': 'lobbyStatus', 'data': {'state': games[gameID]['state'], 'players': getLobbyList(gameID, games[gameID]['players'][0])}})
-                ct.printStatus(f"Game joined: {gameID} with player {clientID} / {clients[clientID].name}")
+                    sendToClient(games[gameID]['players'][0], {'type': 'lobbyStatus', 'data': {'state': games[gameID]['state'], 'players': getLobbyList(gameID, games[gameID]['players'][0])}})
+                    ct.printStatus(f"Game joined: {getShortID(gameID)} with player {getShortID(clientID)} / {clients[clientID].name}")
+                else:
+                    sendToClient(clientID, {'type': 'joinGame', 'data': {'id': None, 'success':False}})
+                    ct.printWarning(f"Client {getShortID(clientID)} / {clients[clientID].name} could not join game with provided code: {gameCode}")
 
             case 'leaveGame': #Client is leaving a game, remove them from the game's player list
                 gameID = data['data']['gameID']
                 games[gameID]['players'].remove(clientID)
                 clients[clientID].gameID = None
-                ct.printStatus(f"Player {clientID} / {clients[clientID].name} left game {gameID}")
+                ct.printStatus(f"Player {getShortID(clientID)} / {clients[clientID].name} left game {getShortID(gameID)}")
 
             case 'gameStatus': #Client (host) is requesting the status of a game, send the state and player list
                 gameID = clients[clientID].gameID
@@ -404,7 +418,6 @@ while True:
 
                 if len(games[gameID]['players']) < MINPLAYERS: #Check if there are enough players. Currently minimum is 1, but can be increased if desired
                     sendToClient(clientID, {'type': 'startGameRes', 'data': {'fail': True, 'message': 'Not enough players'}})
-                    continue
                 else:
                     games[gameID]['state'] = 'running'
 
@@ -424,7 +437,7 @@ while True:
                             }
                         })
                     
-                    ct.printStatus(f"Game initialised: {gameID} with players {games[gameID]['players']}")
+                    ct.printStatus(f"Game initialised: {getShortID(gameID)} with {len(games[gameID]['players'])} players")
 
                     #Initialise and start a game thread
                     gameThreads.append(threading.Thread(target=gameThread, args=(gameID,), daemon=True))
@@ -442,7 +455,7 @@ while True:
                 clients[playerID].gameID = None
                 sendToClient(playerID, {'type': 'kickPlayer', 'data': {'id': game}})
                 sendToClient(clientID, {'type': 'lobbyStatus', 'data': {'state': games[gameID]['state'], 'players': getLobbyList(gameID)}})
-                ct.printStatus(f"Player {playerID} / {clients[playerID].name} kicked from game {gameID}")
+                ct.printStatus(f"Player {getShortID(clientID)} / {clients[playerID].name} kicked from game {getShortID(gameID)}")
 
 
     except Exception as e:

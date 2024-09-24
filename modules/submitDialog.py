@@ -3,6 +3,13 @@ from time import time
 from modules.colours import *
 
 class submitDialog():
+    popup_font = pygame.font.Font(None, 28)
+    input_text = ''
+    inputActive = False
+    submitButtonFont = pygame.font.Font(None, 36)
+    buttonSurface = pygame.Surface((150, 30))
+    cursor_visible = True
+
     def __init__(self, width, height, screen, firstline, secondline, charLimit=12):
         self.WIDTH = width
         self.HEIGHT = height
@@ -10,22 +17,16 @@ class submitDialog():
         self.charLimit = charLimit
         self.input_box = pygame.Rect(self.WIDTH // 2 - 100, self.HEIGHT // 2, 200, 36)
         
-        self.popup_font = pygame.font.Font(None, 28)
         self.popup_text1 = self.popup_font.render(firstline, True, WHITE)
         self.popup_text2 = self.popup_font.render(secondline, True, WHITE)
         self.popup_rect1 = self.popup_text1.get_rect(center=(self.WIDTH // 2, self.HEIGHT // 2 - 50))
         self.popup_rect2 = self.popup_text2.get_rect(center=(self.WIDTH // 2, self.HEIGHT // 2 - 20))
-        self.input_text = ''
-        self.inputActive = False
-        self.submitButtonFont = pygame.font.Font(None, 36)
-        self.buttonSurface = pygame.Surface((150, 30))
 
         self.submitButtonText = self.submitButtonFont.render("Submit", True, BLACK)
 
         self.submitButtonTextRect = self.submitButtonText.get_rect(center=(self.buttonSurface.get_width()/2, self.buttonSurface.get_height()/2))
         self.buttonRect = pygame.Rect(self.WIDTH // 2 - (self.buttonSurface.get_width() // 2), self.HEIGHT // 2 + 50, self.buttonSurface.get_width(), self.buttonSurface.get_height())
-        
-        self.cursor_visible = True
+    
         self.cursor_last_blink = time()
 
     def setHighlights(self, mousePos):

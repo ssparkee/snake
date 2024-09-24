@@ -87,7 +87,7 @@ def socketListener():
 
                 case 'kickPlayer': #If the client is kicked from the lobby, return to the lobby list
                     ct.printStatus(f"You were kicked :(")
-                    returnToLobbyList()
+                    returnToLobbyList(False)
 
                 case 'createGame': #Game creation sucessful, get the game ID and code
                     ct.printStatus(f"Game created: {data['data']['code']}")
@@ -222,24 +222,31 @@ def kickPlayer(playerID):
     """Kick a player from the lobby (run when the host clicks the 'X' in the lobby member list)"""
     sendToServer({'type': 'kickPlayer', 'data': {'id': clientID, 'playerID': playerID, 'gameID': gameID}})
 
-def returnToLobbyList():
+def returnToLobbyList(changeScreen=True):
     """Big function to clear all game data and return to the active lobbies list"""
     global snakeText, windowIndex, gamesList, startLoadTime, getGamesSent, screen, gameEnvironment, connectionAttemptState, gamesList, gameID, gameEnvironment
     #lots of globals, probably not the best way to do this but it works
-
-    snakeText = connectionFont.render('Getting active lobbies...', True, WHITE)
-    gamesList = None
-    startLoadTime = time.time()
-    getGamesSent = False
-    snakeGame.snake = None
-    gameEnvironment = []
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    windowIndex = 3
-    connectionAttemptState = 3
-    gamesList = []
-    gameID = None
-    gameEnvironment = []
-    lobbyMembersWindow.updateMembersList([{'id': clientID, 'name': f"{name} (you)"}], clientID)
+    try:
+        snakeText = connectionFont.render('Getting active lobbies...', True, WHITE)
+        gamesList = None
+        startLoadTime = time.time()
+        getGamesSent = False
+        gameEnvironment = []
+        if changeScreen:
+            screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        gamesList = []
+        gameID = None
+        gameEnvironment = []
+        lobbyMembersWindow.updateMembersList([{'id': clientID, 'name': f"{name} (you)"}], clientID)
+        try:
+            snakeGame.snake = None
+        except:
+            pass
+        connectionAttemptState = 3
+        windowIndex = 3
+    except Exception as e:
+        print('error returning to lobby', e)
+    ct.printStatus("Returning to lobby!")
 
 """Initialise variables"""
 active, gameHost = False, False
